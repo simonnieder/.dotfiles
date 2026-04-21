@@ -1,0 +1,159 @@
+{
+    "position": "top", // Waybar position (top|bottom|left|right)
+    "spacing": 8, // Gaps between modules (4px)
+	"margin": 3,
+    "modules-left": [
+        "hyprland/workspaces",
+        "tray",
+    ],
+
+    "modules-center": [
+        "clock",
+    ],
+
+    "modules-right": [
+	//"bluetooth",
+	"backlight",
+        "pulseaudio",
+        "battery",
+	"network",
+        "custom/voxtype",
+    ],
+
+    // Modules configuration
+    "hyprland/workspaces": {
+        "disable-scroll": true,
+        "all-outputs": true,
+        "format": "{name}",
+        "format-icons": {
+            "1": "",
+            "2": "",
+            "5": "",
+            "4": "",
+            "3": "",
+            "urgent": "",
+            "focused": "",
+            "default": ""
+        }
+    },
+
+    "hyprland/window": {
+        "max-length": 60
+    },
+
+    "tray": {
+        "icon-size": 14,
+		"spacing": 8
+    },
+
+    "clock": {
+        "format": "{:%a %b %e - %H:%M}",
+        "tooltip": false
+    },
+  "custom/nowplaying": {
+    "exec": "~/.config/scripts/now-playing.sh",
+    "format": "  {text}",
+    "return-type": "json",
+    "interval": 1,
+    "escape": true,
+    "hide-empty-text": false,
+    "on-click": "playerctl play-pause",
+    "on-click-right": "playerctl next",
+    "on-click-middle": "playerctl previous",
+    "tooltip-format": "Left: Play/Pause\nRight: Next\nMiddle: Previous"
+  },
+
+    "battery": {
+        "states": {
+            "good": 95,
+            "warning": 30,
+            "critical": 20
+        },
+	    "tooltip": false,
+        "format": "{icon} {capacity}%",
+        "format-charging": " {capacity}%",
+        "format-plugged": " {capacity}%",
+        "format-time": "{H}h {M}m",
+        "format-alt": "{icon} {time}",
+        "format-icons": ["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
+	    "min-length": 6
+    },
+
+    "battery#bat2": {
+        "bat": "BAT2"
+    },
+
+    "network": {
+		"format-icons": ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
+		"format": "{icon}",
+		"format-wifi": "{icon}",
+		"format-ethernet": "󰀂",
+		"format-disconnected": "󰤮",
+		"tooltip-format-wifi": "{essid} ({frequency} GHz)\n⇣{bandwidthDownBytes}  ⇡{bandwidthUpBytes}",
+		"tooltip-format-ethernet": "⇣{bandwidthDownBytes}  ⇡{bandwidthUpBytes}",
+		"tooltip-format-disconnected": "Disconnected",
+		"interval": 3,
+    },
+
+    "bluetooth":{
+        "min-length": 6,
+        "format": " {status}",
+        "format-disabled": " off",
+        "format-off": "",
+        "interval": 30,
+        "on-click": "blueman-manager",
+        "format-no-controller": ""
+    },
+
+    "backlight": {
+        "device": "intel_backlight",
+        "format": "{icon} {percent}%",
+        "format-icons": ["󰃞", "󰃟", "󰃠"],
+        "on-scroll-up": "brightnessctl set 5%-",
+        "on-scroll-down": "brightnessctl set 5%+",
+	    "min-length": 6
+    },
+
+    "pulseaudio": {
+        "format": "{icon} {volume}%",
+        "format-bluetooth": "{icon}  {volume}%",
+        "format-muted": " Muted",
+        "format-icons": {
+            "headphone": "",
+            "hands-free": "",
+            "headset": "",
+            "phone": "",
+            "portable": "",
+            "car": "",
+            "default": [
+                "",
+                ""
+            ]
+        },
+        "on-scroll-up": "pamixer -d 5",
+        "on-scroll-down": "pamixer -i 5",
+	    "min-length": 6,
+        "on-click": "pamixer -t",
+        "tooltip": false
+    },
+    "custom/media": {
+        "format": "{icon} {}",
+        "return-type": "json",
+        "max-length": 40,
+        "format-icons": {
+            "spotify": "",
+            "default": "🎜"
+        },
+        "escape": true,
+        "exec": "$HOME/.config/waybar/mediaplayer.py 2> /dev/null" // Script in resources folder
+        // "exec": "$HOME/.config/waybar/mediaplayer.py --player spotify 2> /dev/null" // Filter player based on name
+    },
+
+    "custom/voxtype": {
+        "exec": "voxtype status --follow --format json",
+        "return-type": "json",
+        "format": "{}",
+        "tooltip": false,
+        "restart-interval": 1
+    }
+}

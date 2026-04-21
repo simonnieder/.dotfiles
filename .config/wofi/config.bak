@@ -1,0 +1,4 @@
+mode=drun
+allow_images=false
+image_size=24
+width=33%
