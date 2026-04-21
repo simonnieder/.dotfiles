@@ -1,0 +1,8 @@
+[package]
+name = "assignment"         
+version = "1.0.0"        
+entrypoint = "assignment.typ"   
+authors = [""] 
+license = "MIT"          
+description = "my assignments"
+repository = ""

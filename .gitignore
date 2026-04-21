@@ -1,0 +1,7 @@
+.config/mpv/scripts/uosc
+/.config/gtk-3.0/bookmarks
+/.config/gtk-4.0/servers
+/pi-stuff/skills/calorie-tracker/__pycache__
+/pi-stuff/skills/calorie-tracker/opennutrition_foods.tsv
+# Private local configs
+.config/fish/local.fish
