@@ -1,0 +1,116 @@
+colourful: true
+
+filekinds:
+  normal: {foreground: "#cdcdcd"}
+  directory: {foreground: "#b4d4cf", is_bold: true}
+  symlink: {foreground: "#7e98e8", is_italic: true}
+  pipe: {foreground: "#f3be7c"}
+  block_device: {foreground: "#e0a363", is_bold: true}
+  char_device: {foreground: "#e0a363", is_bold: true}
+  socket: {foreground: "#d8647e", is_bold: true}
+  special: {foreground: "#bb9dbd"}
+  executable: {foreground: "#7fa563", is_bold: true}
+  mount_point: {foreground: "#6e94b2", is_bold: true, is_underline: true}
+
+perms:
+  user_read: {foreground: "#f3be7c", is_bold: true}
+  user_write: {foreground: "#d8647e", is_bold: true}
+  user_execute_file: {foreground: "#7fa563", is_bold: true, is_underline: true}
+  user_execute_other: {foreground: "#7fa563", is_bold: true}
+  group_read: {foreground: "#f3be7c"}
+  group_write: {foreground: "#d8647e"}
+  group_execute: {foreground: "#7fa563"}
+  other_read: {foreground: "#aeaed1"}
+  other_write: {foreground: "#c48282"}
+  other_execute: {foreground: "#9bb4bc"}
+  special_user_file: {foreground: "#bb9dbd"}
+  special_other: {foreground: "#bb9dbd"}
+  attribute: {foreground: "#606079"}
+
+size:
+  major: {foreground: "#e8b589", is_bold: true}
+  minor: {foreground: "#e0a363"}
+  number_byte: {foreground: "#e8b589", is_bold: true}
+  number_kilo: {foreground: "#e8b589", is_bold: true}
+  number_mega: {foreground: "#f3be7c", is_bold: true}
+  number_giga: {foreground: "#e0a363", is_bold: true}
+  number_huge: {foreground: "#d8647e", is_bold: true}
+  unit_byte: {foreground: "#606079"}
+  unit_kilo: {foreground: "#878787"}
+  unit_mega: {foreground: "#878787"}
+  unit_giga: {foreground: "#878787"}
+  unit_huge: {foreground: "#878787"}
+
+users:
+  user_you: {foreground: "#b4d4cf", is_bold: true}
+  user_root: {foreground: "#d8647e", is_bold: true}
+  user_other: {foreground: "#cdcdcd"}
+  group_yours: {foreground: "#9bb4bc", is_bold: true}
+  group_other: {foreground: "#aeaed1"}
+  group_root: {foreground: "#d8647e"}
+
+links:
+  normal: {foreground: "#7e98e8", is_bold: true}
+  multi_link_file: {foreground: "#7e98e8", background: "#252530"}
+
+git:
+  new: {foreground: "#7fa563"}
+  modified: {foreground: "#f3be7c"}
+  deleted: {foreground: "#d8647e"}
+  renamed: {foreground: "#6e94b2"}
+  ignored: {foreground: "#606079", is_dimmed: true}
+  conflicted: {foreground: "#d8647e", is_bold: true}
+
+git_repo:
+  branch_main: {foreground: "#b4d4cf", is_bold: true}
+  branch_other: {foreground: "#bb9dbd"}
+  git_clean: {foreground: "#7fa563"}
+  git_dirty: {foreground: "#f3be7c"}
+
+security_context:
+  colon: {foreground: "#606079", is_dimmed: true}
+  user: {foreground: "#6e94b2"}
+  role: {foreground: "#7fa563"}
+  typ: {foreground: "#b4d4cf"}
+  range: {foreground: "#bb9dbd"}
+
+file_type:
+  image: {foreground: "#bb9dbd"}
+  video: {foreground: "#c48282", is_bold: true}
+  music: {foreground: "#7e98e8"}
+  crypto: {foreground: "#7fa563", is_bold: true}
+  document: {foreground: "#9bb4bc"}
+  compressed: {foreground: "#d8647e"}
+  temp: {foreground: "#606079", is_dimmed: true}
+  compiled: {foreground: "#e0a363"}
+  build: {foreground: "#f3be7c", is_bold: true, is_underline: true}
+  source: {foreground: "#6e94b2", is_bold: true}
+
+punctuation: {foreground: "#606079", is_bold: true}
+date: {foreground: "#878787"}
+inode: {foreground: "#bb9dbd"}
+blocks: {foreground: "#9bb4bc"}
+header: {foreground: "#b4d4cf", is_underline: true}
+octal: {foreground: "#aeaed1"}
+flags: {foreground: "#878787"}
+
+symlink_path: {foreground: "#7e98e8"}
+control_char: {foreground: "#d8647e"}
+broken_symlink: {foreground: "#d8647e", is_bold: true}
+broken_path_overlay: {foreground: "#d8647e", is_underline: true}
+
+filenames:
+  Cargo.toml: {filename: {foreground: "#e0a363", is_bold: true}}
+  Cargo.lock: {filename: {foreground: "#e0a363"}}
+  Makefile: {filename: {foreground: "#f3be7c", is_bold: true}}
+  package.json: {filename: {foreground: "#6e94b2", is_bold: true}}
+  .gitignore: {filename: {foreground: "#606079", is_italic: true}}
+
+extensions:
+  md: {filename: {foreground: "#9bb4bc"}}
+  rs: {filename: {foreground: "#c48282", is_bold: true}}
+  toml: {filename: {foreground: "#e0a363"}}
+  yaml: {filename: {foreground: "#bb9dbd"}}
+  yml: {filename: {foreground: "#bb9dbd"}}
+  json: {filename: {foreground: "#f3be7c"}}
+  lock: {filename: {foreground: "#878787"}}

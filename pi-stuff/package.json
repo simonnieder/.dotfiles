@@ -3,6 +3,12 @@
   "version": "1.0.0",
   "description": "Personal pi skills, themes, and extensions",
   "keywords": ["pi-package"],
+  "dependencies": {
+    "@earendil-works/pi-ai": "^0.74.0",
+    "@earendil-works/pi-coding-agent": "^0.74.0",
+    "@earendil-works/pi-tui": "^0.74.0",
+    "typebox": "^1.1.24"
+  },
   "pi": {
     "skills": ["./skills"],
     "extensions": [],

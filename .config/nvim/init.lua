@@ -47,7 +47,7 @@ vim.api.nvim_create_autocmd('TextYankPost', {
 })
 
 vim.pack.add({
-	{ src = "https://github.com/nvim-treesitter/nvim-treesitter", version = "master" },
+	{ src = "https://github.com/nvim-treesitter/nvim-treesitter", version = "main" },
 	{ src = "https://github.com/rebelot/kanagawa.nvim" },
 	{ src = "https://github.com/stevearc/oil.nvim" },
 	{ src = "https://github.com/echasnovski/mini.nvim" },
@@ -94,16 +94,18 @@ require("oil").setup({
 	}
 })
 
-require 'nvim-treesitter.configs'.setup {
-	ensure_installed = { "typst", "kotlin", "python", "go", "c", "lua", "vim", "vimdoc", "query", "markdown", "markdown_inline", "typescript" },
-	sync_install = false,
-	auto_install = true,
-	ignore_install = { "javascript" },
-	highlight = {
-		enable = true,
-		additional_vim_regex_highlighting = false,
-	},
+local ts = require('nvim-treesitter')
+ts.setup {
+	install_dir = vim.fn.stdpath('data') .. '/site'
 }
+ts.install({ "typst", "kotlin", "python", "go", "c", "lua", "vim", "vimdoc", "query", "markdown", "markdown_inline", "typescript" })
+
+vim.api.nvim_create_autocmd('FileType', {
+	pattern = { "typst", "kotlin", "python", "go", "c", "lua", "vim", "help", "query", "markdown", "typescript" },
+	callback = function(args)
+		pcall(vim.treesitter.start, args.buf)
+	end,
+})
 
 if not vim.env.TYPST_ROOT then
 	vim.env.TYPST_ROOT = vim.fn.expand('~/uni')
