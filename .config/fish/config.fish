@@ -1,16 +1,14 @@
 alias vim="nvim"
 alias tsess="~/.config/scripts/tmux-session-dispensary.sh"
 alias ls='eza -lha --group-directories-first --icons=auto'
-# Private aliases (IPs, hosts) go in local.fish (not tracked by git)
-if test -f ~/.config/fish/local.fish
-    source ~/.config/fish/local.fish
-end
 
 # Disable fish greeting
 function fish_greeting
 end
 
 set -x RIPGREP_CONFIG_PATH ~/.config/rgrc
+fish_add_path $HOME/.npm-global/bin
+fish_add_path $HOME/.local/bin
 
 # Tide settings
 set -g tide_pwd_bg_color 54546D
@@ -64,3 +62,5 @@ set -g fish_pager_color_description $comment
 
 
 starship init fish | source
+set -gx FZF_DEFAULT_OPTS "--color=bg:#141415,bg+:#252530,fg:#cdcdcd,fg+:#d7d7d7,hl:#6e94b2,hl+:#8ba9c1,info:#bb9dbd,marker:#7fa563,pointer:#f3be7c,prompt:#6e94b2,spinner:#bb9dbd,header:#aeaed1,border:#606079"
+fzf --fish | source

@@ -1,15 +1,14 @@
 #!/bin/bash
 
 DIRS=(
-    "$HOME/documents"
     "$HOME/uni"
     "$HOME/repos"
-    "$HOME"
 )
 
 # directories with depth 0
 ADDITIONAL_CANDIDATES=(
-    ".config/"
+    ".config/",
+	"/home/simonnieder"
 )
 
 if [[ $# -eq 1 ]]; then
@@ -23,10 +22,15 @@ else
         candidates+=$'\n'"$extra"
     done
 
-    selected=$(echo "$candidates" \
-        | sk --margin 10% --color="bw")
+    selected=$(echo "$candidates" | fzf)
 
-    [[ $selected ]] && selected="$HOME/$selected"
+    if [[ $selected ]]; then
+        if [[ "$selected" = /* ]]; then
+            selected="$selected"
+        else
+            selected="$HOME/$selected"
+        fi
+    fi
 fi
 
 [[ ! $selected ]] && exit 0
