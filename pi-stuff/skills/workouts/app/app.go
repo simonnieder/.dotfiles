@@ -19,7 +19,11 @@ type App struct {
 func NewApp() (*App, error) {
 	path := os.Getenv("FULLSTACK_DB_PATH")
 	if strings.TrimSpace(path) == "" {
-		path = filepath.Join(".", "fullstack.db")
+		exe, err := os.Executable()
+		if err != nil {
+			return nil, err
+		}
+		path = filepath.Join(filepath.Dir(exe), "fullstack.db")
 	}
 	st, err := db.Open(path)
 	if err != nil {
