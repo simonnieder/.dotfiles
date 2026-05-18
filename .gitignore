@@ -5,3 +5,5 @@
 /pi-stuff/skills/calorie-tracker/opennutrition_foods.tsv
 # Private local configs
 .config/fish/local.fish
+/pi-stuff/skills/workouts/fullstack
+/pi-stuff/skills/workouts/fullstack.db
