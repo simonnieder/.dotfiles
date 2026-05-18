@@ -1,0 +1,54 @@
+// Zed keymap
+//
+// For information on binding keys, see the Zed
+// documentation: https://zed.dev/docs/key-bindings
+//
+// To see the default key bindings run `zed: open default keymap`
+// from the command palette.
+[
+  {
+    "bindings": {
+      "ctrl-j": "workspace::ToggleBottomDock"
+    }
+  },
+  {
+    "bindings": {
+      "ctrl-b": "workspace::ToggleRightDock"
+    }
+  },
+  {
+    "context": "(Editor && mode == full)",
+    "bindings": {
+      "ctrl-f": null
+    }
+  },
+  {
+    "context": "(VimControl && !menu)",
+    "bindings": {
+      "ctrl-f": null
+    }
+  },
+  {
+    "context": "vim_mode == literal",
+    "bindings": {
+      "ctrl-f": null
+    }
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "ctrl-b": null
+    }
+  },
+  {
+    "context": "!ContextEditor > (Editor && mode == full)",
+    "bindings": {
+      "ctrl-:": null
+    }
+  },
+  {
+    "bindings": {
+      "ctrl-t": "workspace::NewCenterTerminal"
+    }
+  }
+]
