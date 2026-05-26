@@ -50,5 +50,12 @@
     "bindings": {
       "ctrl-t": "workspace::NewCenterTerminal"
     }
+  },
+  {
+    "bindings": {
+      "alt-g": "git_panel::Toggle",
+      "alt-e": "project_panel::Toggle",
+      "alt-a": "agent::Toggle"
+    }
   }
 ]

@@ -1,0 +1,9 @@
+nixos
+wallpapers
+pi-stuff
+README.md
+.gitignore
+yay -Qqe
+zen-browser.nix
+.git
+.local

@@ -9,34 +9,56 @@ git clone git@github.com:simonnieder/.dotfiles.git ~/.dotfiles
 cd ~/.dotfiles
 ```
 
-## Stow on a new machine
+## Stow only into `~/.config`
 
-This repo is currently laid out as a **single Stow package rooted at the repo root**.
-That means the normal install command is:
+Stow the `.config` package into `~/.config`:
 
 ```bash
 cd ~/.dotfiles
-stow -vt ~ .
+stow -Rvt ~/.config .config
+```
+
+This creates links like:
+
+```bash
+~/.config/nvim -> ~/.dotfiles/.config/nvim
+~/.config/waybar -> ~/.dotfiles/.config/waybar
 ```
 
 Dry-run first if you want to preview changes:
 
 ```bash
 cd ~/.dotfiles
-stow -nvt ~ .
+stow -nvt ~/.config .config
+```
+
+### Add a new config to dotfiles
+
+```bash
+# 1. Move the live config into dotfiles
+mv ~/.config/someapp ~/.dotfiles/.config/someapp
+# 2. Re-stow
+cd ~/.dotfiles && stow -Rvt ~/.config .config
+```
+
+### Typst packages (manual symlink, not stow)
+
+Only `.local/share/typst` is synced:
+
+```bash
+ln -sf ~/.dotfiles/.local/share/typst ~/.local/share/typst
 ```
 
 ## Unstow
 
 ```bash
 cd ~/.dotfiles
-stow -Dvt ~ .
+stow -Dvt ~/.config .config
 ```
 
 ## Notes
 
-- This creates symlinks into `~`, e.g. `~/.config/...`, `~/wallpapers`, etc.
-- If Stow reports conflicts, move or delete the existing files first.
-- Because the repo is one package, it is **not stowed individually per app** right now.
-  If I ever want per-app stowing, the repo needs to be reorganized into separate package directories.
-- Keep secrets, tokens, and machine-specific private state out of this public repo.
+- Stow target is `~/.config`, not `~`.
+- `.stow-local-ignore` is kept in the repo, but when using `stow ... .config` only the `.config` package is stowed.
+- `~/.local/share/typst` is a separate manual symlink to `~/.dotfiles/.local/share/typst`.
+- Keep secrets and machine-specific private state out of this repo.

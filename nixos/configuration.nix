@@ -2,7 +2,7 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, zed-1_3_5, ... }:
 
 let
   zen-browser = (import (builtins.fetchTarball {
@@ -119,6 +119,7 @@ in
     libsForQt5.qt5ct
     qt6Packages.qt6ct
     noto-fonts-color-emoji
+    adw-gtk3
 
     # utilities used by configs/scripts
     grim
@@ -128,6 +129,8 @@ in
     hyprlock
     jq
     ripgrep
+    fd
+    python3
     zip
     stow
     eza
@@ -152,7 +155,7 @@ in
     protege-distribution
     qbittorrent
     ollama
-    zed-editor
+    zed-1_3_5
     zen-browser
     gh
     lazydocker
@@ -163,11 +166,18 @@ in
     localsend
     discord
     warp-terminal
+    (pkgs.gnome-power-manager.overrideAttrs (oldAttrs: {
+      postInstall = (oldAttrs.postInstall or "") + ''
+        substituteInPlace $out/share/applications/org.gnome.PowerStats.desktop \
+          --replace "OnlyShowIn=GNOME;Unity;" ""
+      '';
+    }))
   ];
 
   environment.sessionVariables = {
     NIXOS_OZONE_WL = "1";
-    GTK_THEME = "Adwaita:dark";
+    QT_QPA_PLATFORMTHEME = "qt6ct";
+    QT_STYLE_OVERRIDE = "Fusion";
     XCURSOR_THEME = "Adwaita";
     XCURSOR_SIZE = "18";
     HYPRCURSOR_SIZE = "18";
@@ -175,6 +185,8 @@ in
 
   xdg.mime.defaultApplications = {
     "application/pdf" = [ "org.gnome.Evince.desktop" ];
+    "text/html" = [ "zen.desktop" ];
+    "application/xhtml+xml" = [ "zen.desktop" ];
     "x-scheme-handler/http" = [ "zen.desktop" ];
     "x-scheme-handler/https" = [ "zen.desktop" ];
     "inode/directory" = [ "org.gnome.Nautilus.desktop" ];
@@ -202,6 +214,7 @@ in
   ];
 
   programs.niri.enable = true;
+  programs.nix-ld.enable = true;
   programs.dconf.enable = true;
   programs.dconf.profiles.user.databases = [
     {
@@ -230,6 +243,8 @@ in
     openDefaultPorts = true;
   };
   services.ollama.enable = true;
+  services.tlp.enable = true;
+  services.upower.enable = true;
   services.keyd.enable = true;
 
   services.keyd.keyboards.default.settings = {
@@ -240,7 +255,19 @@ in
 
   services.logind.settings.Login = {
     HandlePowerKey = "ignore";
+    HandleLidSwitch = "suspend-then-hibernate";
   };
+
+  # Explicit hibernate delay so systemd uses a timer instead of waiting
+  # for the battery to drain (<5%). Without this, suspend-then-hibernate
+  # on AC/battery may never hibernate because it relies on ACPI low-battery
+  # alarms rather than an RTC wake alarm.
+  systemd.sleep.extraConfig = ''
+    HibernateDelaySec=45m
+  '';
+
+  # Tell the kernel where to resume from hibernation.
+  boot.resumeDevice = "/dev/disk/by-uuid/48995cae-2c41-4c73-b12c-16125c0c1c4d";
 
   services.greetd = {
     enable = true;

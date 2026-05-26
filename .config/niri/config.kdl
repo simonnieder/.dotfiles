@@ -61,6 +61,14 @@ input {
 }
 
 // ==============
+//   CURSOR
+// ==============
+cursor {
+    xcursor-theme "Adwaita"
+    xcursor-size 18
+}
+
+// ==============
 //   LAYOUT
 // ==============
 layout {
@@ -129,6 +137,7 @@ gestures {
 //   STARTUP
 // ==============
 spawn-at-startup "dunst"
+spawn-sh-at-startup "$HOME/.config/matugen/apply-current-theme.sh"
 spawn-sh-at-startup "swaybg -i \"$HOME/wallpapers/a_city_skyline_with_a_sunset_in_the_background.png\" -m fill"
 spawn-at-startup "waybar"
 spawn-at-startup "nm-applet"
@@ -140,16 +149,15 @@ spawn-sh-at-startup "hypridle --config $HOME/.config/niri/hypridle.conf"
 
 // Apps on specific workspaces (window rules below handle placement)
 spawn-at-startup "ghostty"
-spawn-at-startup "zen-browser"
+spawn-at-startup "zen"
 spawn-at-startup "python3" "/home/simonnieder/.config/niri/float-late-windows.py"
 spawn-at-startup "spotify"
 
 // Background set to black in the output blocks above
 
-// Dark theme for GTK
+// Prefer dark GTK, but let matugen control the actual theme.
 spawn-sh-at-startup "gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'"
-//spawn-sh-at-startup "gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark'"
-spawn-sh-at-startup "gsettings set org.gnome.desktop.interface gtk-theme 'adw-gtk3'"
+spawn-sh-at-startup "systemctl --user restart xdg-desktop-portal-gtk"
 
 // ==============
 //  KEY BINDS
@@ -186,7 +194,7 @@ binds {
     Mod+V { toggle-window-floating; }
 
     // --- Screenshot ---
-	Mod+Shift+S { spawn-sh "grim -g \"$(slurp -w 0 2>/dev/null)\" -t ppm - | satty --filename - --fullscreen current-screen --initial-tool crop --output-filename \"$HOME/images/screenshot-$(date +'%Y-%m-%d_%H-%M-%S').png\" --early-exit --actions-on-enter save-to-clipboard --copy-command 'wl-copy'"; }
+	Mod+Shift+S { spawn-sh "grim -g \"$(slurp -w 0 2>/dev/null)\" -t ppm - | satty --filename - --fullscreen --initial-tool crop --output-filename \"$HOME/images/screenshot-$(date +'%Y-%m-%d_%H-%M-%S').png\" --early-exit --actions-on-enter save-to-clipboard --copy-command 'wl-copy'"; }
     Print { spawn-sh "grim -t ppm - | satty --filename - --initial-tool pointer --output-filename \"$HOME/images/screenshot-$(date +'%Y-%m-%d_%H-%M-%S').png\" --early-exit --actions-on-enter save-to-clipboard --copy-command 'wl-copy'"; }
     Sys_Req { spawn-sh "grim -t ppm - | satty --filename - --initial-tool pointer --output-filename \"$HOME/images/screenshot-$(date +'%Y-%m-%d_%H-%M-%S').png\" --early-exit --actions-on-enter save-to-clipboard --copy-command 'wl-copy'"; }
 

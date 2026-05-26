@@ -1,7 +1,7 @@
 git:
   pagers:
     - colorArg: always
-      pager: /home/simonnieder/.local/bin/diff-so-fancy --colors --tabs=4
+      pager: diff-so-fancy --colors --tabs=4
 gui:
   authorColors:
     "*": "#f3be7c"

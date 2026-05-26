@@ -46,7 +46,7 @@ vim.api.nvim_create_autocmd('TextYankPost', {
 	end,
 })
 
-vim.pack.add({
+local plugins = {
 	{ src = "https://github.com/nvim-treesitter/nvim-treesitter", version = "main" },
 	{ src = "https://github.com/rebelot/kanagawa.nvim" },
 	{ src = "https://github.com/stevearc/oil.nvim" },
@@ -61,8 +61,24 @@ vim.pack.add({
 	{ src = "https://github.com/rcarriga/nvim-dap-ui" },
 	{ src = "https://github.com/sindrets/diffview.nvim" },
 	{ src = "https://github.com/nvim-neotest/nvim-nio" },
-	{ src = "https://github.com/chentoast/marks.nvim" }
-})
+	{ src = "https://github.com/chentoast/marks.nvim" },
+}
+
+if vim.pack and vim.pack.add then
+	vim.pack.add(plugins)
+else
+	local pack_root = vim.fn.stdpath('data') .. '/site/pack/pi/start'
+	vim.fn.mkdir(pack_root, 'p')
+	for _, plugin in ipairs(plugins) do
+		local name = plugin.src:match('/([^/]+)%.git$') or plugin.src:match('/([^/]+)$')
+		local dir = pack_root .. '/' .. name
+		if vim.fn.isdirectory(dir) == 0 then
+			vim.fn.system({ 'git', 'clone', '--filter=blob:none', plugin.src, dir })
+		end
+		vim.opt.rtp:append(dir)
+	end
+	vim.cmd('packloadall!')
+end
 
 require "marks".setup {
 	builtin_marks = { "<", ">", "^" },
@@ -111,8 +127,13 @@ if not vim.env.TYPST_ROOT then
 	vim.env.TYPST_ROOT = vim.fn.expand('~/uni')
 end
 require "typst-preview".setup {
+	debug = true,
 	--invert_colors = 'always',
 	port = 8000,
+	dependencies_bin = {
+		tinymist = 'tinymist',
+		websocat = 'websocat',
+	},
 }
 
 vim.api.nvim_create_autocmd('LspAttach', {

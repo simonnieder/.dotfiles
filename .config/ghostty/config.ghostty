@@ -1,6 +1,6 @@
 font-family = FiraCode Nerd Font Mono
 font-size = 15
-command = /usr/bin/fish
+command = /run/current-system/sw/bin/fish
 
 background = #141415
 foreground = #cdcdcd

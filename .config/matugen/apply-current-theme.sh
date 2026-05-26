@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-IMAGE="/home/simonnieder/wallpapers/grainy_gradient.jpg"
-
-exec matugen image "$IMAGE" --source-color-index 0
+# matugen image currently fails non-interactively in this session,
+# so use a stable wallpaper-derived accent color instead.
+exec matugen color hex '#a7c8ff'
