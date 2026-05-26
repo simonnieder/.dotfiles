@@ -9,6 +9,7 @@ DIRS=(
 ADDITIONAL_CANDIDATES=(
     ".config"
 	".dotfiles"
+	"wiki"
     "$HOME"
 )
 
