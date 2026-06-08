@@ -57,5 +57,12 @@
       "alt-e": "project_panel::Toggle",
       "alt-a": "agent::Toggle"
     }
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "alt-f": "workspace::ToggleZoom",
+      "shift-escape": null
+    }
   }
 ]

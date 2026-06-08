@@ -17,3 +17,4 @@
 .local/state/lazygit
 .local/state/wireplumber
 .local/state
+fish_variables

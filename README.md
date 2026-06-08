@@ -1,6 +1,6 @@
 # .dotfiles
 
-Personal dotfiles managed with [GNU Stow](https://www.gnu.org/software/stow/).
+Personal dotfiles managed with NixOS + Home Manager.
 
 ## Clone
 
@@ -9,56 +9,43 @@ git clone git@github.com:simonnieder/.dotfiles.git ~/.dotfiles
 cd ~/.dotfiles
 ```
 
-## Stow only into `~/.config`
-
-Stow the `.config` package into `~/.config`:
+## Apply config
 
 ```bash
-cd ~/.dotfiles
-stow -Rvt ~/.config .config
+~/.dotfiles/nixos/rebuild.sh
 ```
 
-This creates links like:
+This makes every top-level entry in `~/.dotfiles/.config/` appear in `~/.config/` via Home Manager.
+
+Examples:
 
 ```bash
-~/.config/nvim -> ~/.dotfiles/.config/nvim
-~/.config/waybar -> ~/.dotfiles/.config/waybar
+~/.config/nvim
+~/.config/waybar
+~/.config/kitty
 ```
 
-Dry-run first if you want to preview changes:
+Home Manager manages the links, so they resolve through `/nix/store`, but the final source stays your repo in `~/.dotfiles/.config`.
+
+## Add a new config
+
+1. Add a new top-level file or directory under `~/.dotfiles/.config/`
+2. Rebuild:
 
 ```bash
-cd ~/.dotfiles
-stow -nvt ~/.config .config
+~/.dotfiles/nixos/rebuild.sh
 ```
 
-### Add a new config to dotfiles
+## Typst packages
 
-```bash
-# 1. Move the live config into dotfiles
-mv ~/.config/someapp ~/.dotfiles/.config/someapp
-# 2. Re-stow
-cd ~/.dotfiles && stow -Rvt ~/.config .config
-```
-
-### Typst packages (manual symlink, not stow)
-
-Only `.local/share/typst` is synced:
+Only `.local/share/typst` is synced manually:
 
 ```bash
 ln -sf ~/.dotfiles/.local/share/typst ~/.local/share/typst
 ```
 
-## Unstow
-
-```bash
-cd ~/.dotfiles
-stow -Dvt ~/.config .config
-```
-
 ## Notes
 
-- Stow target is `~/.config`, not `~`.
-- `.stow-local-ignore` is kept in the repo, but when using `stow ... .config` only the `.config` package is stowed.
-- `~/.local/share/typst` is a separate manual symlink to `~/.dotfiles/.local/share/typst`.
+- `~/.config` itself is not symlinked wholesale.
+- All top-level entries under `.dotfiles/.config/` are managed by Home Manager.
 - Keep secrets and machine-specific private state out of this repo.

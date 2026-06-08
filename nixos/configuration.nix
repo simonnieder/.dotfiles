@@ -20,6 +20,7 @@ in
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
+  boot.loader.systemd-boot.configurationLimit = 5;
   boot.loader.efi.canTouchEfiVariables = true;
 
   # Use latest kernel.
@@ -131,7 +132,10 @@ in
     ripgrep
     fd
     python3
+    clingo
     zip
+    unzip
+    poppler-utils
     stow
     eza
     fzf
@@ -144,6 +148,7 @@ in
     # apps referenced in config
     obsidian
     telegram-desktop
+    thunderbird
     (pkgs.symlinkJoin {
       name = "spotify";
       paths = [ pkgs.spotify ];
@@ -211,6 +216,7 @@ in
   fonts.packages = with pkgs; [
     nerd-fonts.jetbrains-mono
     nerd-fonts.fira-code
+    atkinson-hyperlegible-next
   ];
 
   programs.niri.enable = true;

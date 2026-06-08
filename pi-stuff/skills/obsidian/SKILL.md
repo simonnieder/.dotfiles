@@ -2,6 +2,7 @@
 name: obsidian
 description: Operate on the local Obsidian wiki vault. Use when working with notes, wikilinks, backlinks, log/daily entries, wiki maintenance, or opening notes in Obsidian.
 compatibility: Requires the local `obsidian` CLI.
+disable-model-invocation: true
 ---
 
 # Obsidian
@@ -9,6 +10,15 @@ compatibility: Requires the local `obsidian` CLI.
 This skill is for the **single local wiki vault** at `~/wiki`. Always default to `vault=wiki`.
 
 For canonical workflow, naming, and directory rules, follow `~/wiki/AGENTS.md`.
+
+Important path note for this vault: `wiki-index.md` and `log.md` live at the vault root, not under a `wiki/` subdirectory.
+
+When using normal file tools in this repo, read and write:
+- `AGENTS.md`
+- `wiki-index.md`
+- `log.md`
+
+Do **not** use `wiki/wiki-index.md` or `wiki/log.md` in this vault.
 
 ## Defaults
 
@@ -66,9 +76,10 @@ obsidian open file="deep-learning" newtab
 
 Per `AGENTS.md`:
 
-- **Ingest**: from message or `inbox/` put raw in `raw/`, create/update `sources/`, update `concepts/`/`projects/`/`entities/`, update `wiki-index.md`, append `log.md`
-- **Query**: check `wiki-index.md` first, read relevant pages, synthesize
-- **Lint**: fix broken links, orphan pages, stale nav, unprocessed `inbox/` items
+- **Startup / read first**: read `AGENTS.md`, then `wiki-index.md`, then `log.md`
+- **Ingest**: from message or `inbox/` put raw in `raw/`, create/update `sources/`, update `concepts/`/`projects/`/`entities/`, update the root files `wiki-index.md` and `log.md`
+- **Query**: check the root `wiki-index.md` first, then read relevant pages and synthesize
+- **Lint**: fix broken links, orphan pages, stale nav, and unprocessed `inbox/` items
 
 Use normal file tools for bulk rewrites. Use the CLI when wikilink resolution, backlinks, or Obsidian-native features are needed.
 

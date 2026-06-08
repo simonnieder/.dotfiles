@@ -7,17 +7,47 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+ 	"lsp": {
+		"tinymist": {
+			"initialization_options": {
+				// Enable background preview
+				// Server will be running on 127.0.0.1:23635
+				"preview": {
+				"invertColors": "never",
+					"background": {
+						"enabled": true,
+					},
+				},
+			},
+
+			"settings": {
+				// Compile on save
+				// This will compile a PDF for the `main.typ` file in the project root.
+				"exportPdf": "onSave",
+				"outputPath": "$root/$name",
+
+				// Enable formatter
+				"formatterMode": "typstyle",
+			}
+		}
+	},
+	"languages": {
+		"Typst": {
+			// Disable soft wrap
+			"soft_wrap": "none",
+		},
+	},
     "search": {
         "button": false
     },
-    "scroll_sensitivity": 5.0,
+    "scroll_sensitivity": 2.0,
     "cli_default_open_behavior": "existing_window",
     "restore_on_startup": "empty_tab",
     "terminal": {
         "button": false,
         "scroll_multiplier": 5.0,
         "font_weight": 400.0,
-        "font_size": 18.0,
+        "font_size": 16.0,
         "font_family": "FiraCode Nerd Font Mono",
         "shell": {
             "program": "fish"
@@ -35,6 +65,12 @@
     "diff_view_style": "unified",
     "buffer_font_weight": 400.0,
     "agent": {
+        "default_width": 500.0,
+        "inline_assistant_model": {
+            "provider": "zed.dev",
+            "model": "gpt-5.4",
+            "enable_thinking": false
+        },
         "flexible": false,
         "tool_permissions": {
             "default": "allow",
@@ -73,7 +109,8 @@
         "model_parameters": []
     },
     "collaboration_panel": {
-        "button": false,
+        "default_width": 0.0,
+        "button": true,
         "dock": "left"
     },
     "outline_panel": {
@@ -123,11 +160,11 @@
     "icon_theme": {
         "mode": "dark",
         "light": "Zed (Default)",
-        "dark": "Zed (Default)"
+        "dark": "Colored Zed Icons Theme Dark"
     },
     "base_keymap": "VSCode",
-    "ui_font_size": 18.0,
-    "buffer_font_size": 18.0,
+    "ui_font_size": 16.0,
+    "buffer_font_size": 16.0,
     "theme": {
         "mode": "dark",
         "light": "One Light",

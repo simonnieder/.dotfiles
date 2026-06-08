@@ -72,8 +72,13 @@ else
 	for _, plugin in ipairs(plugins) do
 		local name = plugin.src:match('/([^/]+)%.git$') or plugin.src:match('/([^/]+)$')
 		local dir = pack_root .. '/' .. name
+		local has_checkout = vim.fn.isdirectory(dir .. '/lua') == 1
+			or vim.fn.isdirectory(dir .. '/plugin') == 1
+			or vim.fn.filereadable(dir .. '/README.md') == 1
 		if vim.fn.isdirectory(dir) == 0 then
 			vim.fn.system({ 'git', 'clone', '--filter=blob:none', plugin.src, dir })
+		elseif not has_checkout and vim.fn.isdirectory(dir .. '/.git') == 1 then
+			vim.fn.system({ 'git', '-C', dir, 'reset', '--hard', 'HEAD' })
 		end
 		vim.opt.rtp:append(dir)
 	end
