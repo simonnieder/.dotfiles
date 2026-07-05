@@ -18,3 +18,5 @@
 .local/state/wireplumber
 .local/state
 fish_variables
+/.config/mimeapps.list
+/AGENTS.md
