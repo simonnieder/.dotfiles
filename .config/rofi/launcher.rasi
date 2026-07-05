@@ -16,7 +16,7 @@ configuration {
     display-run:                "run";
     display-window:             "window";
 	drun-display-format:        "{name} [<span weight='light' size='small'><i>({generic})</i></span>]";
-	window-format:              "{w} · {c} · {t}";
+	window-format:              "{t}    <span alpha='50%'>[{c}]</span>";
 }
 
 /*****----- Global Properties -----*****/
@@ -24,7 +24,7 @@ configuration {
 @import                          "./colors.rasi"
 
 * {
-  font: "JetBrains Mono Nerd Font 13";
+  font: "JetBrainsMono Nerd Font Bold 13";
 }
 
 

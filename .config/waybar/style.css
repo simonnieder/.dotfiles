@@ -49,9 +49,14 @@ window#waybar {
 #battery,
 #backlight,
 #pulseaudio,
+#custom-time-tracker,
 #custom-voxtype {
   min-width: 12px;
   margin: 0 9px;
+}
+
+#custom-time-tracker {
+  margin-right: 0;
 }
 
 #tray {
@@ -106,9 +111,22 @@ menuitem:hover {
 }
 
 #battery.warning,
-#battery.critical,
-#custom-voxtype.recording {
+#battery.critical {
   color: @error;
+}
+
+#custom-voxtype.recording,
+#custom-voxtype.transcribing {
+  color: @error;
+}
+
+#custom-time-tracker.running {
+  color: @primary;
+}
+
+#custom-time-tracker.idle {
+  color: @on_surface_variant;
+  opacity: 0.75;
 }
 
 #battery,
@@ -116,6 +134,7 @@ menuitem:hover {
 #network,
 #bluetooth,
 #pulseaudio,
+#custom-time-tracker,
 #custom-voxtype,
 #tray,
 #custom-expand-icon {

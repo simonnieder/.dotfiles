@@ -38,7 +38,7 @@ input {
     touchpad {
         tap
         natural-scroll
-        // disable-while-typing is off by default in niri (unlike hyprland)
+        accel-speed 0.1
         scroll-factor 0.2
     }
 
@@ -51,8 +51,8 @@ input {
     // warp-mouse-to-focus
 
     // Focus windows on hover, only if mostly visible (≤5% scroll)
-    // Focus windows on hover (won't scroll view)
-    focus-follows-mouse max-scroll-amount="0%"
+    // Disabled for touchpad sanity; can feel twitchy on slight pointer movement.
+    // focus-follows-mouse max-scroll-amount="0%"
 }
 
 // ==============
@@ -60,7 +60,7 @@ input {
 // ==============
 cursor {
     xcursor-theme "Adwaita"
-    xcursor-size 18
+    xcursor-size 24
 }
 
 // ==============
@@ -144,7 +144,7 @@ spawn-sh-at-startup "hypridle --config $HOME/.config/niri/hypridle.conf"
 
 // Apps on specific workspaces (window rules below handle placement)
 spawn-at-startup "ghostty"
-spawn-at-startup "zen"
+spawn-sh-at-startup "$HOME/.config/niri/autostart-helium.sh"
 spawn-at-startup "python3" "/home/simonnieder/.config/niri/float-late-windows.py"
 spawn-at-startup "spotify"
 
@@ -163,15 +163,21 @@ binds {
 
     // --- Launch programs ---
     Mod+D      hotkey-overlay-title="Run an Application: rofi"  { spawn "rofi" "-show" "drun"; }
-    Mod+B      hotkey-overlay-title="Focus Browser"            { spawn-sh "$HOME/.config/scripts/focus-app.sh zen zen-browser"; }
+    Mod+P      hotkey-overlay-title="Time Tracker: rofi"       { spawn-sh "$HOME/.config/rofi/scripts/time-tracker.sh"; }
+    Mod+W      hotkey-overlay-title="Recent Windows: rofi"     { spawn-sh "$HOME/.config/rofi/scripts/recent-windows.sh"; }
+    Mod+Shift+Space hotkey-overlay-title="Command Center: rofi" { spawn-sh "$HOME/.config/rofi/scripts/command-center.sh"; }
+    Mod+Space  hotkey-overlay-title="Power Menu: rofi"          { spawn-sh "$HOME/.config/rofi/scripts/powermenu.sh"; }
+    Mod+C      hotkey-overlay-title="Clipboard History: rofi"   { spawn-sh "$HOME/.config/rofi/scripts/clipboard.sh"; }
+    Mod+Period hotkey-overlay-title="Emoji Picker: rofi"        { spawn-sh "$HOME/.config/rofi/scripts/emoji.sh"; }
+    Mod+B      hotkey-overlay-title="Focus Browser"            { spawn-sh "$HOME/.config/scripts/focus-app.sh helium helium-browser"; }
     Mod+S      hotkey-overlay-title="Focus Spotify"            { spawn-sh "$HOME/.config/scripts/focus-app.sh spotify spotify"; }
     Mod+Z      hotkey-overlay-title="Focus Zed"            { spawn-sh "$HOME/.config/scripts/focus-app.sh zed zeditor"; }
     Mod+M      hotkey-overlay-title="Focus Telegram"           { spawn-sh "$HOME/.config/scripts/focus-app.sh telegram Telegram"; }
     Mod+N      hotkey-overlay-title="Focus Obsidian"           { spawn-sh "$HOME/.config/scripts/focus-app.sh obsidian obsidian"; }
     Mod+Return      hotkey-overlay-title="Focus Terminal"           { spawn-sh "$HOME/.config/scripts/focus-app.sh ghostty ghostty"; }
     Mod+E      hotkey-overlay-title="Open File Manager: nautilus" { spawn "nautilus"; }
-    Mod+Ctrl+Shift+L hotkey-overlay-title="Lock the Screen: hyprlock"  { spawn "hyprlock"; }
-    Mod+Ctrl+Shift+H hotkey-overlay-title="Hibernate"                   { spawn "systemctl" "hibernate"; }
+    Mod+Ctrl+Shift+L hotkey-overlay-title="Lock the Screen: hyprlock"  { spawn-sh "$HOME/.config/rofi/scripts/time-tracker.sh lock"; }
+    Mod+Ctrl+Shift+H hotkey-overlay-title="Hibernate"                   { spawn-sh "$HOME/.config/rofi/scripts/time-tracker.sh systemctl-break hibernate"; }
 	Mod+X { spawn "voxtype" "record" "toggle"; }
 
     Mod+Shift+Q              { close-window; }
@@ -214,8 +220,6 @@ binds {
     Mod+Shift+K     { move-window-up; }
 
     // --- Monitor navigation ---
-    Mod+P       { focus-monitor-next; }
-    Mod+Shift+P { focus-monitor-previous; }
     Mod+Ctrl+P       { move-column-to-monitor-next; }
     Mod+Ctrl+Shift+P { move-column-to-monitor-previous; }
 
@@ -322,14 +326,20 @@ window-rule {
 }
 
 window-rule {
-    match app-id=r#"zen"#
+    match app-id=r#"^(helium|Helium|helium-browser)$"#
     open-on-workspace "2"
     open-maximized true
 }
 
 window-rule {
-    match app-id=r#"^zed$"#
-    match app-id=r#"^dev\.zed\.Zed$"#
+    match app-id=r#"^(zed|dev\.zed\.Zed)$"#
+    open-on-workspace "1"
+    open-maximized true
+}
+
+window-rule {
+    match app-id=r#"^(obsidian|md\.obsidian\.Obsidian)$"#
+    open-on-workspace "2"
     open-maximized true
 }
 
@@ -342,20 +352,32 @@ window-rule {
 }
 
 window-rule {
-    match app-id=r#"^telegram-desktop$"#    // Telegram Desktop flatpak
-    match app-id=r#"^org\.telegram\.desktop$"#  // Telegram Desktop regular
+    match app-id=r#"^(telegram-desktop|org\.telegram\.desktop)$"#
+    open-on-workspace "3"
     open-floating false
     default-column-width { proportion 0.3333; }
 }
 
 window-rule {
-    match app-id=r#"^spotify$"#
-    match app-id=r#"^Spotify$"#
+    match app-id=r#"^(chrome-hnpfjngllnobngcgfapefoaidbinmjnm-Default|crx_hnpfjngllnobngcgfapefoaidbinmjnm)$"#
+    open-on-workspace "3"
+    open-floating false
+}
+
+window-rule {
+    match app-id=r#"^(spotify|Spotify)$"#
     open-on-workspace "3"
     open-floating false
 }
 
 // Float system utilities
+window-rule {
+    match app-id=r#"^nixos-rebuild$"#
+    open-floating true
+    default-column-width { proportion 0.8; }
+    default-window-height { proportion 0.8; }
+}
+
 window-rule {
     match app-id=r#"^pavucontrol$"#
     match app-id=r#"^org\.pulseaudio\.pavucontrol$"#
@@ -435,6 +457,7 @@ hotkey-overlay {
 // LID / SWITCH
 // ==============
 switch-events {
-    lid-close { spawn "systemctl" "suspend-then-hibernate"; }
+    // logind handles lid-close with suspend-then-hibernate; duplicating it here
+    // can race into a second sleep immediately after resume.
     lid-open  { spawn "niri" "msg" "action" "power-on-monitors"; }
 }

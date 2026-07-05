@@ -12,7 +12,8 @@
     "backlight",
     "pulseaudio",
     "battery",
-    "custom/voxtype"
+    "custom/voxtype",
+    "custom/time-tracker"
   ],
 
   "niri/workspaces": {
@@ -143,6 +144,16 @@
   "tray": {
     "icon-size": 12,
     "spacing": 17
+  },
+
+  "custom/time-tracker": {
+    "exec": "$HOME/.config/rofi/scripts/time-tracker.sh status",
+    "return-type": "json",
+    "format": "{}",
+    "tooltip": true,
+    "interval": 1,
+    "on-click": "$HOME/.config/rofi/scripts/time-tracker.sh",
+    "on-click-right": "$HOME/.config/rofi/scripts/time-tracker.sh stop"
   },
 
   "custom/voxtype": {
