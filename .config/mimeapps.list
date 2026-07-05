@@ -1,4 +1,8 @@
 [Default Applications]
+text/html=helium.desktop
+application/xhtml+xml=helium.desktop
+x-scheme-handler/http=helium.desktop
+x-scheme-handler/https=helium.desktop
 x-scheme-handler/tg=org.telegram.desktop.desktop
 x-scheme-handler/tonsite=org.telegram.desktop.desktop
 
