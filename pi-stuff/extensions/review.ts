@@ -17,7 +17,8 @@
  * - `/review branch main` - review against main branch
  * - `/review commit abc123` - review specific commit
  * - `/review folder src docs` - review specific folders/files (snapshot, not diff)
- * - `/review` selector includes Add/Remove custom review instructions (applies to all modes)
+ * - `/review custom "review the auth/session flow"` - run a one-off custom review
+ * - `/review` selector includes Custom review and Add/Remove shared review instructions (applies to all modes)
  * - `/review --extra "focus on performance regressions"` - add extra review instruction (works with any mode)
  * - `/review "focus on performance regressions"` - open the selector and append a one-off instruction
  *
@@ -357,7 +358,8 @@ type ReviewTarget =
 	| { type: "baseBranch"; branch: string }
 	| { type: "commit"; sha: string; title?: string }
 	| { type: "pullRequest"; prNumber: number; baseBranch: string; title: string }
-	| { type: "folder"; paths: string[] };
+	| { type: "folder"; paths: string[] }
+	| { type: "custom"; prompt: string };
 
 // Prompts (adapted from Codex)
 const UNCOMMITTED_PROMPT =
@@ -385,6 +387,9 @@ const PULL_REQUEST_PROMPT_FALLBACK =
 
 const FOLDER_REVIEW_PROMPT =
 	"Review the code in the following paths: {paths}. This is a snapshot review (not a diff). Read the files directly in these paths and provide prioritized, actionable findings.";
+
+const CUSTOM_REVIEW_PROMPT =
+	"Perform a custom code review using these user-provided scope/instructions. Inspect the relevant repository state before producing findings:\n\n{prompt}";
 
 // The detailed review rubric (adapted from Codex's review_prompt.md)
 const REVIEW_RUBRIC = `# Review Guidelines
@@ -739,6 +744,9 @@ async function buildReviewPrompt(
 
 		case "folder":
 			return FOLDER_REVIEW_PROMPT.replace("{paths}", target.paths.join(", "));
+
+		case "custom":
+			return CUSTOM_REVIEW_PROMPT.replace("{prompt}", target.prompt);
 	}
 }
 
@@ -764,6 +772,11 @@ function getUserFacingHint(target: ReviewTarget): string {
 		case "folder": {
 			const joined = target.paths.join(", ");
 			return joined.length > 40 ? `folders: ${joined.slice(0, 37)}...` : `folders: ${joined}`;
+		}
+
+		case "custom": {
+			const firstLine = target.prompt.split(/\r?\n/).find((line) => line.trim())?.trim() ?? "custom review";
+			return firstLine.length > 40 ? `custom: ${firstLine.slice(0, 37)}...` : `custom: ${firstLine}`;
 		}
 	}
 }
@@ -836,6 +849,7 @@ const REVIEW_PRESETS = [
 	{ value: "commit", label: "Review a commit", description: "" },
 	{ value: "pullRequest", label: "Review a pull request", description: "(GitHub PR)" },
 	{ value: "folder", label: "Review a folder (or more)", description: "(snapshot, not diff)" },
+	{ value: "custom", label: "Custom review", description: "(freeform scope/instructions)" },
 ] as const;
 
 const TOGGLE_LOOP_FIXING_VALUE = "toggleLoopFixing" as const;
@@ -915,8 +929,8 @@ export default function reviewExtension(pi: ExtensionAPI) {
 
 		while (true) {
 			const customInstructionsLabel = reviewCustomInstructions
-				? "Remove custom review instructions"
-				: "Add custom review instructions";
+				? "Remove shared review instructions"
+				: "Add shared review instructions";
 			const customInstructionsDescription = reviewCustomInstructions
 				? "(currently set)"
 				: "(applies to all review modes)";
@@ -983,22 +997,22 @@ export default function reviewExtension(pi: ExtensionAPI) {
 			if (result === TOGGLE_CUSTOM_INSTRUCTIONS_VALUE) {
 				if (reviewCustomInstructions) {
 					setReviewCustomInstructions(undefined);
-					ctx.ui.notify("Custom review instructions removed", "info");
+					ctx.ui.notify("Shared review instructions removed", "info");
 					continue;
 				}
 
 				const customInstructions = await ctx.ui.editor(
-					"Enter custom review instructions (applies to all review modes):",
+					"Enter shared review instructions (applies to all review modes):",
 					"",
 				);
 
 				if (!customInstructions?.trim()) {
-					ctx.ui.notify("Custom review instructions not changed", "info");
+					ctx.ui.notify("Shared review instructions not changed", "info");
 					continue;
 				}
 
 				setReviewCustomInstructions(customInstructions);
-				ctx.ui.notify("Custom review instructions saved", "info");
+				ctx.ui.notify("Shared review instructions saved", "info");
 				continue;
 			}
 
@@ -1025,6 +1039,12 @@ export default function reviewExtension(pi: ExtensionAPI) {
 
 				case "folder": {
 					const target = await showFolderInput(ctx);
+					if (target) return target;
+					break;
+				}
+
+				case "custom": {
+					const target = await showCustomReviewInput(ctx);
 					if (target) return target;
 					break;
 				}
@@ -1283,6 +1303,21 @@ export default function reviewExtension(pi: ExtensionAPI) {
 		if (paths.length === 0) return null;
 
 		return { type: "folder", paths };
+	}
+
+	/**
+	 * Show custom review prompt input
+	 */
+	async function showCustomReviewInput(ctx: ExtensionContext): Promise<ReviewTarget | null> {
+		const result = await ctx.ui.editor(
+			"Enter custom review scope/instructions:",
+			"Review the current changes and focus on ...",
+		);
+
+		const prompt = result?.trim();
+		if (!prompt) return null;
+
+		return { type: "custom", prompt };
 	}
 
 	/**
@@ -1578,6 +1613,12 @@ export default function reviewExtension(pi: ExtensionAPI) {
 				return { target: { type: "folder", paths }, extraInstruction };
 			}
 
+			case "custom": {
+				const prompt = parts.slice(1).join(" ").trim();
+				if (!prompt) return { target: null, extraInstruction };
+				return { target: { type: "custom", prompt }, extraInstruction };
+			}
+
 			case "pr": {
 				const ref = parts[1];
 				if (!ref) return { target: null, extraInstruction };
@@ -1764,7 +1805,7 @@ export default function reviewExtension(pi: ExtensionAPI) {
 
 	// Register the /review command
 	pi.registerCommand("review", {
-		description: "Review code changes (PR, uncommitted, branch, commit, or folder)",
+		description: "Review code changes (PR, uncommitted, branch, commit, folder, or custom)",
 		handler: async (args, ctx) => {
 			if (!ctx.hasUI) {
 				ctx.ui.notify("Review requires interactive mode", "error");
