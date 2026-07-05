@@ -119,7 +119,13 @@ local ts = require('nvim-treesitter')
 ts.setup {
 	install_dir = vim.fn.stdpath('data') .. '/site'
 }
-ts.install({ "typst", "kotlin", "python", "go", "c", "lua", "vim", "vimdoc", "query", "markdown", "markdown_inline", "typescript" })
+
+local treesitter_parsers = { "typst", "kotlin", "python", "go", "c", "lua", "vim", "vimdoc", "query", "markdown", "markdown_inline", "typescript" }
+if vim.fn.executable('tree-sitter') == 1 then
+	ts.install(treesitter_parsers)
+else
+	vim.notify_once('tree-sitter CLI not found; skipping nvim-treesitter parser installation', vim.log.levels.WARN)
+end
 
 vim.api.nvim_create_autocmd('FileType', {
 	pattern = { "typst", "kotlin", "python", "go", "c", "lua", "vim", "help", "query", "markdown", "typescript" },

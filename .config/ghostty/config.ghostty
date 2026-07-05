@@ -1,5 +1,6 @@
+term = xterm-ghostty
 font-family = FiraCode Nerd Font Mono
-font-size = 15
+font-size = 13
 command = /run/current-system/sw/bin/fish
 
 background = #141415

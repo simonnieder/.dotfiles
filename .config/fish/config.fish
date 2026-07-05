@@ -65,3 +65,4 @@ starship init fish | source
 set -gx FZF_DEFAULT_OPTS "--color=bg:#141415,bg+:#252530,fg:#cdcdcd,fg+:#d7d7d7,hl:#6e94b2,hl+:#8ba9c1,info:#bb9dbd,marker:#7fa563,pointer:#f3be7c,prompt:#6e94b2,spinner:#bb9dbd,header:#aeaed1,border:#606079"
 fzf --fish | source
 set -gx PATH /home/simonnieder/.local/bin $PATH
+set -gx PI_TMUX_IMAGES 1

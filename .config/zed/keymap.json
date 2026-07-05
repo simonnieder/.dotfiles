@@ -52,10 +52,19 @@
     }
   },
   {
+    "context": "Editor && mode == full",
     "bindings": {
-      "alt-g": "git_panel::Toggle",
-      "alt-e": "project_panel::Toggle",
-      "alt-a": "agent::Toggle"
+      "alt-g": "git_panel::ToggleFocus",
+      "alt-e": "project_panel::ToggleFocus",
+      "alt-a": "agent::ToggleFocus"
+    }
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "alt-g": "git_panel::ToggleFocus",
+      "alt-e": "project_panel::ToggleFocus",
+      "alt-a": "agent::ToggleFocus"
     }
   },
   {

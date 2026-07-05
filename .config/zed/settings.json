@@ -41,8 +41,8 @@
         "button": false
     },
     "scroll_sensitivity": 2.0,
-    "cli_default_open_behavior": "existing_window",
-    "restore_on_startup": "empty_tab",
+    "cli_default_open_behavior": "new_window",
+    "restore_on_startup": "last_workspace",
     "terminal": {
         "button": false,
         "scroll_multiplier": 5.0,
