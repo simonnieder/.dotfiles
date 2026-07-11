@@ -41,18 +41,27 @@ fullstack workout start --name "Ad hoc"
 
 fullstack workout prompt
 fullstack workout log --weight-kg 52.5 --reps 8 [--rir 1] [--side left|right|none]
+fullstack workout set update <set-id> --weight-kg 52.5 --reps 8 [--rir 1] [--side left|right|none]
+fullstack workout undo-last [--exercise-entry <exercise-entry-id>]
 fullstack workout note --text "felt strong"
 
 fullstack workout next
 fullstack workout prev
 fullstack workout goto --exercise <exercise-id>
 fullstack workout goto --entry <exercise-entry-id>
+fullstack workout move-exercise --exercise <exercise-id> [--before <exercise-id>]
+fullstack workout set-count --exercise <exercise-id> --sets <n>
 
 fullstack workout skip-set
 fullstack workout skip-exercise
 fullstack workout add-exercise --exercise <exercise-id>
 
 fullstack workout finish
+fullstack report weekly --days 7
+
+fullstack template move-exercise <template-id> --exercise <exercise-id> [--before <exercise-id>]
+fullstack template set-sets <template-id> --exercise <exercise-id> --sets <n>
+fullstack template replace-exercise <template-id> --from <exercise-id> --to <exercise-id>
 ```
 
 ## Notes
@@ -63,7 +72,10 @@ fullstack workout finish
 - If planned sets are exhausted, extra `workout log` calls append more sets.
 - `skip-set` removes one remaining empty planned set.
 - `skip-exercise` removes all remaining empty planned sets for the current exercise.
-- `finish` cleans up remaining empty placeholder sets before completing the workout.
+- `finish` cleans up remaining empty placeholder sets before completing the workout and prints the checked progress summary.
+- `workout progress` uses set-slot comparison by default (set 1 vs prior set 1, set 2 vs prior set 2).
+- Use `workout` structural commands for one-off/session-only changes.
+- Use `template` structural commands for persistent changes to future workouts.
 
 ## Prompt output
 

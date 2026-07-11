@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/simonnieder/fullstack/db"
 )
@@ -50,6 +51,8 @@ func (a *App) Run(args []string) error {
 		return a.runTemplate(args[1:])
 	case "workout":
 		return a.runWorkout(args[1:])
+	case "report":
+		return a.runReport(args[1:])
 	case "weight":
 		return a.runWeight(args[1:])
 	case "help", "--help", "-h":
@@ -72,6 +75,9 @@ Commands:
   template create --name <name> [--description <text>] [--type <type>]
   template show <template-id>
   template add-exercise <template-id> --exercise <exercise-id> [--sets <n>]
+  template move-exercise <template-id> --exercise <exercise-id> [--before <exercise-id>]
+  template set-sets <template-id> --exercise <exercise-id> --sets <n>
+  template replace-exercise <template-id> --from <exercise-id> --to <exercise-id>
 
   workout start [--template <template-id>] [--name <title>]
   workout prompt
@@ -79,14 +85,21 @@ Commands:
   workout prev
   workout goto --exercise <exercise-id> | --entry <exercise-entry-id>
   workout log --weight-kg <kg> --reps <n> [--rir <value>] [--side left|right|none] [--exercise-entry <exercise-entry-id>]
-  workout note --text <text> [--exercise-entry <exercise-entry-id>]
+  workout set update <set-id> --weight-kg <kg> --reps <n> [--rir <value>] [--side left|right|none]
+  workout undo-last [--exercise-entry <exercise-entry-id>]
+  workout move-exercise --exercise <exercise-id> [--before <exercise-id>]
+  workout set-count --exercise <exercise-id> --sets <n>
+  workout note --text <text> [--exercise-entry <exercise-entry-id>] [--workout]
   workout skip-set [--exercise-entry <exercise-entry-id>]
   workout skip-exercise [--exercise-entry <exercise-entry-id>]
   workout current
   workout list
   workout show <workout-id>
+  workout progress <workout-id>
   workout finish [<workout-id>]
   workout add-exercise --exercise <exercise-id>
+
+  report weekly [--days <n>]
 
   weight add --kg <kg> [--at <RFC3339>]
   weight list [--limit <n>]
@@ -241,6 +254,75 @@ func (a *App) runTemplate(args []string) error {
 		}
 		fmt.Println("ok")
 		return nil
+	case "move-exercise", "move":
+		if len(args) < 2 {
+			return errors.New("usage: fullstack template move-exercise <template-id> --exercise <exercise-id> [--before <exercise-id>]")
+		}
+		templateID, err := parseIntID("template-id", args[1])
+		if err != nil {
+			return err
+		}
+		fs := flag.NewFlagSet("template move-exercise", flag.ContinueOnError)
+		exerciseID := fs.Int("exercise", 0, "exercise template id")
+		beforeID := fs.Int("before", 0, "move before exercise template id; omitted means end")
+		if err := fs.Parse(args[2:]); err != nil {
+			return err
+		}
+		if *exerciseID <= 0 {
+			return errors.New("--exercise is required")
+		}
+		if err := a.store.MoveTemplateExercise(templateID, *exerciseID, *beforeID); err != nil {
+			return err
+		}
+		fmt.Println("ok")
+		return nil
+	case "set-sets":
+		if len(args) < 2 {
+			return errors.New("usage: fullstack template set-sets <template-id> --exercise <exercise-id> --sets <n>")
+		}
+		templateID, err := parseIntID("template-id", args[1])
+		if err != nil {
+			return err
+		}
+		fs := flag.NewFlagSet("template set-sets", flag.ContinueOnError)
+		exerciseID := fs.Int("exercise", 0, "exercise template id")
+		sets := fs.Int("sets", -1, "set count")
+		if err := fs.Parse(args[2:]); err != nil {
+			return err
+		}
+		if *exerciseID <= 0 {
+			return errors.New("--exercise is required")
+		}
+		if *sets < 0 {
+			return errors.New("--sets is required")
+		}
+		if err := a.store.SetTemplateExerciseSetCount(templateID, *exerciseID, *sets); err != nil {
+			return err
+		}
+		fmt.Println("ok")
+		return nil
+	case "replace-exercise":
+		if len(args) < 2 {
+			return errors.New("usage: fullstack template replace-exercise <template-id> --from <exercise-id> --to <exercise-id>")
+		}
+		templateID, err := parseIntID("template-id", args[1])
+		if err != nil {
+			return err
+		}
+		fs := flag.NewFlagSet("template replace-exercise", flag.ContinueOnError)
+		fromID := fs.Int("from", 0, "exercise template id to replace")
+		toID := fs.Int("to", 0, "replacement exercise template id")
+		if err := fs.Parse(args[2:]); err != nil {
+			return err
+		}
+		if *fromID <= 0 || *toID <= 0 {
+			return errors.New("--from and --to are required")
+		}
+		if err := a.store.ReplaceTemplateExercise(templateID, *fromID, *toID); err != nil {
+			return err
+		}
+		fmt.Println("ok")
+		return nil
 	default:
 		return fmt.Errorf("unknown template command %q", args[0])
 	}
@@ -354,6 +436,128 @@ func (a *App) runWorkout(args []string) error {
 			return err
 		}
 		return a.printWorkoutPrompt(id)
+	case "set":
+		if len(args) < 3 || args[1] != "update" {
+			return errors.New("usage: fullstack workout set update <set-id> --weight-kg <kg> --reps <n> [--rir <value>] [--side left|right|none]")
+		}
+		setID, err := parseIntID("set-id", args[2])
+		if err != nil {
+			return err
+		}
+		fs := flag.NewFlagSet("workout set update", flag.ContinueOnError)
+		weightKg := fs.String("weight-kg", "", "weight in kg")
+		reps := fs.Int("reps", 0, "reps")
+		rir := fs.String("rir", "", "rir value")
+		side := fs.String("side", "", "left|right|none")
+		if err := fs.Parse(args[3:]); err != nil {
+			return err
+		}
+		if strings.TrimSpace(*weightKg) == "" {
+			return errors.New("--weight-kg is required")
+		}
+		if *reps <= 0 {
+			return errors.New("--reps must be > 0")
+		}
+		grams, repsPtr, err := parseLoggedSet(*weightKg, *reps)
+		if err != nil {
+			return err
+		}
+		if _, err := a.store.UpdateSet(setID, grams, repsPtr, *side, *rir); err != nil {
+			return err
+		}
+		fmt.Println("ok")
+		return nil
+	case "undo-last":
+		id, err := a.resolveCurrentWorkoutID()
+		if err != nil {
+			return err
+		}
+		fs := flag.NewFlagSet("workout undo-last", flag.ContinueOnError)
+		exerciseEntry := fs.Int("exercise-entry", 0, "workout exercise entry id")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		entryID := *exerciseEntry
+		if entryID <= 0 {
+			currentExercise, _, _, err := a.store.CurrentWorkoutExercise(id)
+			if err != nil {
+				return err
+			}
+			if currentExercise == nil {
+				return errors.New("current workout has no exercises")
+			}
+			entryID = currentExercise.ExerciseID
+		}
+		if err := a.store.UndoLastSet(entryID); err != nil {
+			return err
+		}
+		return a.printWorkoutPrompt(id)
+	case "move-exercise", "move":
+		id, err := a.resolveCurrentWorkoutID()
+		if err != nil {
+			return err
+		}
+		fs := flag.NewFlagSet("workout move-exercise", flag.ContinueOnError)
+		entryID := fs.Int("entry", 0, "workout exercise entry id")
+		exerciseID := fs.Int("exercise", 0, "exercise template id")
+		beforeEntryID := fs.Int("before-entry", 0, "move before workout exercise entry id; omitted means end")
+		beforeExerciseID := fs.Int("before", 0, "move before exercise template id")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		moveEntryID := *entryID
+		if moveEntryID <= 0 && *exerciseID > 0 {
+			moveEntryID, err = a.store.ResolveWorkoutExerciseEntry(id, *exerciseID)
+			if err != nil {
+				return err
+			}
+		}
+		beforeID := *beforeEntryID
+		if beforeID <= 0 && *beforeExerciseID > 0 {
+			beforeID, err = a.store.ResolveWorkoutExerciseEntry(id, *beforeExerciseID)
+			if err != nil {
+				return err
+			}
+		}
+		if moveEntryID <= 0 {
+			return errors.New("--entry or --exercise is required")
+		}
+		if err := a.store.MoveWorkoutExercise(id, moveEntryID, beforeID); err != nil {
+			return err
+		}
+		if err := a.store.SetCurrentWorkoutExercise(id, moveEntryID); err != nil {
+			return err
+		}
+		return a.printWorkoutPrompt(id)
+	case "set-count":
+		id, err := a.resolveCurrentWorkoutID()
+		if err != nil {
+			return err
+		}
+		fs := flag.NewFlagSet("workout set-count", flag.ContinueOnError)
+		entryID := fs.Int("entry", 0, "workout exercise entry id")
+		exerciseID := fs.Int("exercise", 0, "exercise template id")
+		sets := fs.Int("sets", -1, "set count")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		resolvedEntryID := *entryID
+		if resolvedEntryID <= 0 && *exerciseID > 0 {
+			resolvedEntryID, err = a.store.ResolveWorkoutExerciseEntry(id, *exerciseID)
+			if err != nil {
+				return err
+			}
+		}
+		if resolvedEntryID <= 0 {
+			return errors.New("--entry or --exercise is required")
+		}
+		if *sets < 0 {
+			return errors.New("--sets is required")
+		}
+		if err := a.store.SetWorkoutExerciseSetCount(resolvedEntryID, *sets); err != nil {
+			return err
+		}
+		return a.printWorkoutPrompt(id)
 	case "note":
 		id, err := a.resolveCurrentWorkoutID()
 		if err != nil {
@@ -361,9 +565,16 @@ func (a *App) runWorkout(args []string) error {
 		}
 		fs := flag.NewFlagSet("workout note", flag.ContinueOnError)
 		exerciseEntry := fs.Int("exercise-entry", 0, "workout exercise entry id")
-		text := fs.String("text", "", "exercise note")
+		text := fs.String("text", "", "note text")
+		workoutLevel := fs.Bool("workout", false, "store note on the workout instead of the current exercise")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
+		}
+		if *workoutLevel {
+			if err := a.store.UpdateWorkoutNote(id, *text); err != nil {
+				return err
+			}
+			return a.printWorkoutPrompt(id)
 		}
 		entryID := *exerciseEntry
 		if entryID <= 0 {
@@ -471,6 +682,15 @@ func (a *App) runWorkout(args []string) error {
 			return err
 		}
 		return a.printWorkout(id)
+	case "progress":
+		if len(args) < 2 {
+			return errors.New("usage: fullstack workout progress <workout-id>")
+		}
+		id, err := parseIntID("workout-id", args[1])
+		if err != nil {
+			return err
+		}
+		return a.printWorkoutSetProgress(id)
 	case "finish":
 		if len(args) >= 2 {
 			id, err := parseIntID("workout-id", args[1])
@@ -480,8 +700,9 @@ func (a *App) runWorkout(args []string) error {
 			if err := a.store.FinishWorkout(id); err != nil {
 				return err
 			}
-			fmt.Println("ok")
-			return nil
+			fmt.Println("finished")
+			fmt.Println()
+			return a.printWorkoutSetProgress(id)
 		}
 		id, err := a.resolveCurrentWorkoutID()
 		if err != nil {
@@ -490,8 +711,9 @@ func (a *App) runWorkout(args []string) error {
 		if err := a.store.FinishWorkout(id); err != nil {
 			return err
 		}
-		fmt.Println("ok")
-		return nil
+		fmt.Println("finished")
+		fmt.Println()
+		return a.printWorkoutSetProgress(id)
 	case "add-exercise":
 		fs := flag.NewFlagSet("workout add-exercise", flag.ContinueOnError)
 		exerciseID := fs.Int("exercise", 0, "exercise template id")
@@ -513,6 +735,48 @@ func (a *App) runWorkout(args []string) error {
 		return nil
 	default:
 		return fmt.Errorf("unknown workout command %q", args[0])
+	}
+}
+
+func (a *App) runReport(args []string) error {
+	if len(args) == 0 {
+		return errors.New("report command required")
+	}
+	switch args[0] {
+	case "weekly":
+		fs := flag.NewFlagSet("report weekly", flag.ContinueOnError)
+		days := fs.Int("days", 7, "days to include")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		cutoff := time.Now().AddDate(0, 0, -*days)
+		items, err := a.store.ListWorkouts()
+		if err != nil {
+			return err
+		}
+		fmt.Printf("weekly workout report — last %d days\n\n", *days)
+		count := 0
+		for _, item := range items {
+			if !item.CompletedAt.Valid {
+				continue
+			}
+			completedAt, err := time.Parse(time.RFC3339, item.CompletedAt.String)
+			if err != nil || completedAt.Before(cutoff) {
+				continue
+			}
+			count++
+			progress, err := a.store.WorkoutProgress(item.ID)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("- %s %s — session %d: %d/%d sets progressed (%s)\n", completedAt.Format("2006-01-02"), item.Title, item.ID, progress.TotalProgressedSets, progress.TotalComparableSets, formatPercent(progress.TotalProgressedSets, progress.TotalComparableSets))
+		}
+		if count == 0 {
+			fmt.Println("no completed workouts")
+		}
+		return nil
+	default:
+		return fmt.Errorf("unknown report command %q", args[0])
 	}
 }
 
@@ -580,6 +844,9 @@ func (a *App) printWorkout(id int) error {
 		status = "completed"
 	}
 	fmt.Printf("id: %d\ntitle: %s\nstatus: %s\n", workout.ID, workout.Title, status)
+	if workout.Notes.Valid && strings.TrimSpace(workout.Notes.String) != "" {
+		fmt.Printf("note: %s\n", workout.Notes.String)
+	}
 	if workout.StartedAt.Valid {
 		fmt.Printf("started: %s\n", workout.StartedAt.String)
 	}
@@ -594,11 +861,11 @@ func (a *App) printWorkout(id int) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("progress: %d/%d exercises progressed\n", progress.TotalProgressedExercises, progress.TotalExercises)
+	fmt.Printf("progress: %d/%d sets progressed (%s)\n", progress.TotalProgressedSets, progress.TotalComparableSets, formatPercent(progress.TotalProgressedSets, progress.TotalComparableSets))
 	if len(progress.MuscleGroups) > 0 {
 		fmt.Println("muscle groups:")
 		for _, item := range progress.MuscleGroups {
-			fmt.Printf("  - %s: %d/%d progressed\n", item.MuscleGroup, item.ProgressedExercises, item.TotalExercises)
+			fmt.Printf("  - %s: %d/%d sets progressed\n", item.MuscleGroup, item.TotalProgressedSets, item.TotalComparableSets)
 		}
 	}
 	progressByExerciseID := map[int]db.ExerciseProgress{}
@@ -612,7 +879,7 @@ func (a *App) printWorkout(id int) error {
 	for _, ex := range exercises {
 		exProgress := progressByExerciseID[ex.ExerciseID]
 		progressLabel := "not progressed"
-		if exProgress.Progressed {
+		if exProgress.TotalProgressedSets > 0 {
 			progressLabel = "progressed"
 		}
 		currentMarker := ""
@@ -647,6 +914,36 @@ func (a *App) printWorkout(id int) error {
 	return nil
 }
 
+func (a *App) printWorkoutSetProgress(id int) error {
+	workout, err := a.store.GetWorkout(id)
+	if err != nil {
+		return err
+	}
+	if workout == nil {
+		return fmt.Errorf("workout %d not found", id)
+	}
+	progress, err := a.store.WorkoutProgress(id)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%s — session %d\n", workout.Title, workout.ID)
+	fmt.Printf("set progress: %d/%d sets progressed (%s)\n", progress.TotalProgressedSets, progress.TotalComparableSets, formatPercent(progress.TotalProgressedSets, progress.TotalComparableSets))
+	for _, exercise := range progress.Exercises {
+		fmt.Println()
+		for _, item := range exercise.Sets {
+			if !item.Set.IsCompleted {
+				continue
+			}
+			mark := "⬜"
+			if item.Progressed {
+				mark = "✅"
+			}
+			fmt.Printf("%s %s — %s\n", mark, exercise.Exercise.Title, formatSetShort(item.Set))
+		}
+	}
+	return nil
+}
+
 func (a *App) printWorkoutPrompt(workoutID int) error {
 	workout, err := a.store.GetWorkout(workoutID)
 	if err != nil {
@@ -660,6 +957,9 @@ func (a *App) printWorkoutPrompt(workoutID int) error {
 		return err
 	}
 	fmt.Printf("workout: %s\n", workout.Title)
+	if workout.Notes.Valid && strings.TrimSpace(workout.Notes.String) != "" {
+		fmt.Printf("workout note: %s\n", workout.Notes.String)
+	}
 	if currentExercise == nil {
 		fmt.Println("exercise: none")
 		fmt.Println("next: add an exercise or finish workout")
@@ -685,12 +985,19 @@ func (a *App) printWorkoutPrompt(workoutID int) error {
 			fmt.Printf("  - %s\n", formatPromptSet(set))
 		}
 	}
+	previousNote, err := a.store.PreviousExerciseNote(currentExercise.TemplateID, workoutID)
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(previousNote) != "" {
+		fmt.Printf("last note: %s\n", previousNote)
+	}
 	note, err := a.store.ExerciseNote(currentExercise.ExerciseID)
 	if err != nil {
 		return err
 	}
 	if strings.TrimSpace(note) != "" {
-		fmt.Printf("note: %s\n", note)
+		fmt.Printf("today note: %s\n", note)
 	}
 	currentSets, err := a.store.ExerciseSets(currentExercise.ExerciseID)
 	if err != nil {
@@ -731,6 +1038,27 @@ func formatPromptSet(set db.SetRow) string {
 		parts = append(parts, "[done]")
 	}
 	return strings.Join(parts, " ")
+}
+
+func formatSetShort(set db.SetRow) string {
+	parts := []string{}
+	if set.WeightInGrams.Valid {
+		parts = append(parts, fmt.Sprintf("%.1fkg", float64(set.WeightInGrams.Int64)/1000.0))
+	}
+	if set.Reps.Valid {
+		parts = append(parts, fmt.Sprintf("x %d", set.Reps.Int64))
+	}
+	if len(parts) == 0 {
+		return "empty"
+	}
+	return strings.Join(parts, " ")
+}
+
+func formatPercent(n, d int) string {
+	if d == 0 {
+		return "0.0%"
+	}
+	return fmt.Sprintf("%.1f%%", float64(n)*100/float64(d))
 }
 
 func parseLoggedSet(weightKg string, reps int) (*int, *int, error) {

@@ -46,6 +46,7 @@ type TemplateExercise struct {
 type WorkoutRow struct {
 	ID                int
 	Title             string
+	Notes             sql.NullString
 	StartedAt         sql.NullString
 	CompletedAt       sql.NullString
 	CurrentExerciseID sql.NullInt64
@@ -79,22 +80,28 @@ type WeightEntry struct {
 }
 
 type WorkoutProgressSummary struct {
-	TotalExercises           int
-	TotalProgressedExercises int
-	MuscleGroups             []MuscleGroupProgress
-	Exercises                []ExerciseProgress
+	TotalComparableSets int
+	TotalProgressedSets int
+	MuscleGroups        []MuscleGroupProgress
+	Exercises           []ExerciseProgress
 }
 
 type MuscleGroupProgress struct {
 	MuscleGroup         string
-	TotalExercises      int
-	ProgressedExercises int
+	TotalComparableSets int
+	TotalProgressedSets int
 }
 
 type ExerciseProgress struct {
-	Exercise   WorkoutExerciseRow
+	Exercise            WorkoutExerciseRow
+	TotalComparableSets int
+	TotalProgressedSets int
+	Sets                []SetProgress
+}
+
+type SetProgress struct {
+	Set        SetRow
 	Progressed bool
-	ComparedTo int
 }
 
 func Open(path string) (*Store, error) {
@@ -331,7 +338,7 @@ func (s *Store) StartWorkout(templateID *int, title string) (int, error) {
 
 func (s *Store) GetCurrentWorkout() (*WorkoutRow, error) {
 	var item WorkoutRow
-	err := s.DB.QueryRow(`SELECT id, title, started_at, completed_at, current_exercise_id FROM workouts WHERE completed_at IS NULL ORDER BY COALESCE(started_at, created_at) DESC, id DESC LIMIT 1`).Scan(&item.ID, &item.Title, &item.StartedAt, &item.CompletedAt, &item.CurrentExerciseID)
+	err := s.DB.QueryRow(`SELECT id, title, notes, started_at, completed_at, current_exercise_id FROM workouts WHERE completed_at IS NULL ORDER BY COALESCE(started_at, created_at) DESC, id DESC LIMIT 1`).Scan(&item.ID, &item.Title, &item.Notes, &item.StartedAt, &item.CompletedAt, &item.CurrentExerciseID)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -342,7 +349,7 @@ func (s *Store) GetCurrentWorkout() (*WorkoutRow, error) {
 }
 
 func (s *Store) ListWorkouts() ([]WorkoutRow, error) {
-	rows, err := s.DB.Query(`SELECT id, title, started_at, completed_at, current_exercise_id FROM workouts ORDER BY COALESCE(started_at, created_at) DESC, id DESC`)
+	rows, err := s.DB.Query(`SELECT id, title, notes, started_at, completed_at, current_exercise_id FROM workouts ORDER BY COALESCE(started_at, created_at) DESC, id DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +357,7 @@ func (s *Store) ListWorkouts() ([]WorkoutRow, error) {
 	var out []WorkoutRow
 	for rows.Next() {
 		var item WorkoutRow
-		if err := rows.Scan(&item.ID, &item.Title, &item.StartedAt, &item.CompletedAt, &item.CurrentExerciseID); err != nil {
+		if err := rows.Scan(&item.ID, &item.Title, &item.Notes, &item.StartedAt, &item.CompletedAt, &item.CurrentExerciseID); err != nil {
 			return nil, err
 		}
 		out = append(out, item)
@@ -360,7 +367,7 @@ func (s *Store) ListWorkouts() ([]WorkoutRow, error) {
 
 func (s *Store) GetWorkout(id int) (*WorkoutRow, error) {
 	var item WorkoutRow
-	err := s.DB.QueryRow(`SELECT id, title, started_at, completed_at, current_exercise_id FROM workouts WHERE id = ?`, id).Scan(&item.ID, &item.Title, &item.StartedAt, &item.CompletedAt, &item.CurrentExerciseID)
+	err := s.DB.QueryRow(`SELECT id, title, notes, started_at, completed_at, current_exercise_id FROM workouts WHERE id = ?`, id).Scan(&item.ID, &item.Title, &item.Notes, &item.StartedAt, &item.CompletedAt, &item.CurrentExerciseID)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -558,6 +565,36 @@ func (s *Store) GotoWorkoutExerciseByTemplate(workoutID, templateID int) (*Worko
 	return nil, 0, 0, fmt.Errorf("exercise %d not found in workout %d", templateID, workoutID)
 }
 
+func (s *Store) WorkoutNote(workoutID int) (string, error) {
+	var note sql.NullString
+	err := s.DB.QueryRow(`SELECT notes FROM workouts WHERE id = ?`, workoutID).Scan(&note)
+	if err == sql.ErrNoRows {
+		return "", fmt.Errorf("workout %d not found", workoutID)
+	}
+	if err != nil {
+		return "", err
+	}
+	if !note.Valid {
+		return "", nil
+	}
+	return note.String, nil
+}
+
+func (s *Store) UpdateWorkoutNote(workoutID int, note string) error {
+	res, err := s.DB.Exec(`UPDATE workouts SET notes = ?, updated_at = ? WHERE id = ?`, nullIfBlank(note), now(), workoutID)
+	if err != nil {
+		return err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return fmt.Errorf("workout %d not found", workoutID)
+	}
+	return nil
+}
+
 func (s *Store) ExerciseNote(exerciseID int) (string, error) {
 	var note sql.NullString
 	err := s.DB.QueryRow(`SELECT notes FROM exercises WHERE id = ?`, exerciseID).Scan(&note)
@@ -613,7 +650,7 @@ func (s *Store) WorkoutProgress(workoutID int) (*WorkoutProgressSummary, error) 
 		return nil, err
 	}
 
-	summary := &WorkoutProgressSummary{TotalExercises: len(exercises)}
+	summary := &WorkoutProgressSummary{}
 	muscleGroups := map[string]*MuscleGroupProgress{}
 
 	for _, exercise := range exercises {
@@ -626,25 +663,40 @@ func (s *Store) WorkoutProgress(workoutID int) (*WorkoutProgressSummary, error) 
 			return nil, err
 		}
 
-		progressed := isProgressedExercise(currentSets, previousSets)
-		if progressed {
-			summary.TotalProgressedExercises++
-		}
-		if exercise.MuscleGroup.Valid {
-			item := muscleGroups[exercise.MuscleGroup.String]
-			if item == nil {
-				item = &MuscleGroupProgress{MuscleGroup: exercise.MuscleGroup.String}
-				muscleGroups[exercise.MuscleGroup.String] = item
+		setProgress := compareExerciseSets(currentSets, previousSets)
+		exerciseComparableSets := 0
+		exerciseProgressedSets := 0
+		for _, item := range setProgress {
+			if isComparableCompletedSet(item.Set) {
+				summary.TotalComparableSets++
+				exerciseComparableSets++
+				if exercise.MuscleGroup.Valid {
+					group := muscleGroups[exercise.MuscleGroup.String]
+					if group == nil {
+						group = &MuscleGroupProgress{MuscleGroup: exercise.MuscleGroup.String}
+						muscleGroups[exercise.MuscleGroup.String] = group
+					}
+					group.TotalComparableSets++
+				}
 			}
-			item.TotalExercises++
-			if progressed {
-				item.ProgressedExercises++
+			if item.Progressed {
+				summary.TotalProgressedSets++
+				exerciseProgressedSets++
+				if exercise.MuscleGroup.Valid {
+					group := muscleGroups[exercise.MuscleGroup.String]
+					if group == nil {
+						group = &MuscleGroupProgress{MuscleGroup: exercise.MuscleGroup.String}
+						muscleGroups[exercise.MuscleGroup.String] = group
+					}
+					group.TotalProgressedSets++
+				}
 			}
 		}
 		summary.Exercises = append(summary.Exercises, ExerciseProgress{
-			Exercise:   exercise,
-			Progressed: progressed,
-			ComparedTo: len(previousSets),
+			Exercise:            exercise,
+			TotalComparableSets: exerciseComparableSets,
+			TotalProgressedSets: exerciseProgressedSets,
+			Sets:                setProgress,
 		})
 	}
 
@@ -652,11 +704,11 @@ func (s *Store) WorkoutProgress(workoutID int) (*WorkoutProgressSummary, error) 
 		summary.MuscleGroups = append(summary.MuscleGroups, *item)
 	}
 	slices.SortFunc(summary.MuscleGroups, func(a, b MuscleGroupProgress) int {
-		if a.ProgressedExercises != b.ProgressedExercises {
-			return b.ProgressedExercises - a.ProgressedExercises
+		if a.TotalProgressedSets != b.TotalProgressedSets {
+			return b.TotalProgressedSets - a.TotalProgressedSets
 		}
-		if a.TotalExercises != b.TotalExercises {
-			return b.TotalExercises - a.TotalExercises
+		if a.TotalComparableSets != b.TotalComparableSets {
+			return b.TotalComparableSets - a.TotalComparableSets
 		}
 		return strings.Compare(a.MuscleGroup, b.MuscleGroup)
 	})
@@ -668,18 +720,82 @@ func (s *Store) PreviousExerciseSets(templateID, excludingWorkoutID int) ([]SetR
 	return s.latestCompletedExerciseSets(templateID, excludingWorkoutID)
 }
 
-func (s *Store) latestCompletedExerciseSets(templateID, excludingWorkoutID int) ([]SetRow, error) {
-	var exerciseID int
+func (s *Store) PreviousExerciseNote(templateID, excludingWorkoutID int) (string, error) {
+	var referenceTime string
+	var referenceID int
 	err := s.DB.QueryRow(`
+		SELECT COALESCE(completed_at, started_at, created_at), id
+		FROM workouts
+		WHERE id = ?
+	`, excludingWorkoutID).Scan(&referenceTime, &referenceID)
+	if err != nil {
+		return "", err
+	}
+
+	var note sql.NullString
+	err = s.DB.QueryRow(`
+		SELECT e.notes
+		FROM exercises e
+		JOIN workouts w ON w.id = e.workout_id
+		WHERE e.template_id = ?
+		  AND e.workout_id <> ?
+		  AND w.completed_at IS NOT NULL
+		  AND e.notes IS NOT NULL
+		  AND TRIM(e.notes) <> ''
+		  AND (
+			w.completed_at < ?
+			OR (w.completed_at = ? AND w.id < ?)
+		  )
+		ORDER BY w.completed_at DESC, w.id DESC, e.id DESC
+		LIMIT 1
+	`, templateID, excludingWorkoutID, referenceTime, referenceTime, referenceID).Scan(&note)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	if !note.Valid {
+		return "", nil
+	}
+	return note.String, nil
+}
+
+func (s *Store) latestCompletedExerciseSets(templateID, excludingWorkoutID int) ([]SetRow, error) {
+	var referenceTime string
+	var referenceID int
+	err := s.DB.QueryRow(`
+		SELECT COALESCE(completed_at, started_at, created_at), id
+		FROM workouts
+		WHERE id = ?
+	`, excludingWorkoutID).Scan(&referenceTime, &referenceID)
+	if err != nil {
+		return nil, err
+	}
+
+	var exerciseID int
+	err = s.DB.QueryRow(`
 		SELECT e.id
 		FROM exercises e
 		JOIN workouts w ON w.id = e.workout_id
 		WHERE e.template_id = ?
 		  AND e.workout_id <> ?
 		  AND w.completed_at IS NOT NULL
+		  AND EXISTS (
+			SELECT 1
+			FROM exercise_sets es
+			WHERE es.exercise_id = e.id
+			  AND es.is_completed = 1
+			  AND es.weight_in_grams IS NOT NULL
+			  AND es.reps IS NOT NULL
+		  )
+		  AND (
+			w.completed_at < ?
+			OR (w.completed_at = ? AND w.id < ?)
+		  )
 		ORDER BY w.completed_at DESC, w.id DESC, e.id DESC
 		LIMIT 1
-	`, templateID, excludingWorkoutID).Scan(&exerciseID)
+	`, templateID, excludingWorkoutID, referenceTime, referenceTime, referenceID).Scan(&exerciseID)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -690,31 +806,73 @@ func (s *Store) latestCompletedExerciseSets(templateID, excludingWorkoutID int) 
 	return s.ExerciseSets(exerciseID)
 }
 
-func isProgressedExercise(currentSets, previousSets []SetRow) bool {
-	if len(previousSets) == 0 {
+func compareExerciseSets(currentSets, previousSets []SetRow) []SetProgress {
+	previousBySequence := map[int]SetRow{}
+	for _, previous := range comparableCompletedSets(previousSets) {
+		previousBySequence[previous.SequenceNo] = previous
+	}
+	out := make([]SetProgress, 0, len(currentSets))
+	for _, current := range currentSets {
+		if isEmptyPlaceholderSet(current) {
+			continue
+		}
+		progressed := false
+		if previous, ok := previousBySequence[current.SequenceNo]; ok {
+			progressed = isProgressedSetSlot(current, previous)
+		}
+		out = append(out, SetProgress{Set: current, Progressed: progressed})
+	}
+	return out
+}
+
+func comparableCompletedSets(sets []SetRow) []SetRow {
+	out := make([]SetRow, 0, len(sets))
+	for _, set := range sets {
+		if isComparableCompletedSet(set) {
+			out = append(out, set)
+		}
+	}
+	return out
+}
+
+func isComparableCompletedSet(set SetRow) bool {
+	return set.IsCompleted && set.WeightInGrams.Valid && set.Reps.Valid
+}
+
+func isEmptyPlaceholderSet(set SetRow) bool {
+	return !set.IsCompleted && !set.WeightInGrams.Valid && !set.Reps.Valid && !set.Side.Valid && !set.RIR.Valid && !set.Notes.Valid
+}
+
+func isProgressedSetSlot(current, previous SetRow) bool {
+	if !isComparableCompletedSet(current) || !isComparableCompletedSet(previous) {
 		return false
 	}
-	for _, current := range currentSets {
-		for i := range previousSets {
-			if isProgressedSet(current, &previousSets[i]) {
-				return true
-			}
-		}
+	if current.WeightInGrams.Int64 == previous.WeightInGrams.Int64 {
+		return current.Reps.Int64 > previous.Reps.Int64 && !hasLowerRIR(current.RIR, previous.RIR)
+	}
+	if current.WeightInGrams.Int64 > previous.WeightInGrams.Int64 {
+		return current.Reps.Int64 >= previous.Reps.Int64 && !hasLowerRIR(current.RIR, previous.RIR)
 	}
 	return false
 }
 
-func isProgressedSet(current SetRow, previous *SetRow) bool {
-	if previous == nil {
-		return false
+func isProgressedSet(current SetRow, previousSets []SetRow) (bool, *SetRow) {
+	if !isComparableCompletedSet(current) || len(previousSets) == 0 {
+		return false, nil
 	}
-	if current.WeightInGrams.Valid && previous.WeightInGrams.Valid && current.WeightInGrams.Int64 > previous.WeightInGrams.Int64 {
-		return true
+	for i := range previousSets {
+		previous := previousSets[i]
+		if !isComparableCompletedSet(previous) {
+			continue
+		}
+		if current.WeightInGrams.Int64 == previous.WeightInGrams.Int64 && current.Reps.Int64 > previous.Reps.Int64 && !hasLowerRIR(current.RIR, previous.RIR) {
+			return true, &previousSets[i]
+		}
+		if current.WeightInGrams.Int64 > previous.WeightInGrams.Int64 && current.Reps.Int64 >= previous.Reps.Int64 && !hasLowerRIR(current.RIR, previous.RIR) {
+			return true, &previousSets[i]
+		}
 	}
-	if current.Reps.Valid && previous.Reps.Valid && current.Reps.Int64 > previous.Reps.Int64 {
-		return !hasLowerRIR(current.RIR, previous.RIR)
-	}
-	return false
+	return false, nil
 }
 
 func hasLowerRIR(current, previous sql.NullString) bool {
@@ -918,6 +1076,206 @@ func (s *Store) resequenceExerciseSets(exerciseID int) error {
 	timestamp := now()
 	for i, id := range ids {
 		if _, err := s.DB.Exec(`UPDATE exercise_sets SET sequence_no = ?, updated_at = ? WHERE id = ?`, i+1, timestamp, id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Store) UpdateSet(setID int, weightInGrams *int, reps *int, side, rir string) (int, error) {
+	var exerciseID int
+	if err := s.DB.QueryRow(`SELECT exercise_id FROM exercise_sets WHERE id = ?`, setID).Scan(&exerciseID); err != nil {
+		if err == sql.ErrNoRows {
+			return 0, fmt.Errorf("set %d not found", setID)
+		}
+		return 0, err
+	}
+	res, err := s.DB.Exec(`
+		UPDATE exercise_sets
+		SET weight_in_grams = ?, reps = ?, side = ?, rir = ?, is_completed = 1, updated_at = ?
+		WHERE id = ?
+	`, intPtrValue(weightInGrams), intPtrValue(reps), nullIfBlank(strings.ToUpper(side)), nullIfBlank(rir), now(), setID)
+	if err != nil {
+		return 0, err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	if count == 0 {
+		return 0, fmt.Errorf("set %d not found", setID)
+	}
+	return exerciseID, nil
+}
+
+func (s *Store) UndoLastSet(exerciseID int) error {
+	var setID int
+	err := s.DB.QueryRow(`
+		SELECT id
+		FROM exercise_sets
+		WHERE exercise_id = ? AND is_completed = 1
+		ORDER BY sequence_no DESC, id DESC
+		LIMIT 1
+	`, exerciseID).Scan(&setID)
+	if err == sql.ErrNoRows {
+		return fmt.Errorf("no completed set to undo")
+	}
+	if err != nil {
+		return err
+	}
+	return s.deleteSetAndResequence(exerciseID, setID)
+}
+
+func (s *Store) SetWorkoutExerciseSetCount(exerciseID, setCount int) error {
+	if setCount < 0 {
+		return fmt.Errorf("set count must be >= 0")
+	}
+	var completed int
+	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM exercise_sets WHERE exercise_id = ? AND is_completed = 1`, exerciseID).Scan(&completed); err != nil {
+		return err
+	}
+	if completed > setCount {
+		return fmt.Errorf("exercise has %d completed sets; cannot reduce to %d", completed, setCount)
+	}
+	for {
+		var count int
+		if err := s.DB.QueryRow(`SELECT COUNT(*) FROM exercise_sets WHERE exercise_id = ?`, exerciseID).Scan(&count); err != nil {
+			return err
+		}
+		if count == setCount {
+			return nil
+		}
+		if count < setCount {
+			if _, err := s.AddSet(exerciseID, nil, nil, "", "", "", false); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := s.deleteFirstEmptyPlaceholderSet(exerciseID); err != nil {
+			return err
+		}
+	}
+}
+
+func (s *Store) MoveWorkoutExercise(workoutID, exerciseID, beforeExerciseID int) error {
+	exercises, err := s.WorkoutExercises(workoutID)
+	if err != nil {
+		return err
+	}
+	ids := make([]int, 0, len(exercises))
+	foundMove := false
+	foundBefore := beforeExerciseID == 0
+	for _, ex := range exercises {
+		if ex.ExerciseID == exerciseID {
+			foundMove = true
+			continue
+		}
+		if ex.ExerciseID == beforeExerciseID {
+			ids = append(ids, exerciseID)
+			foundBefore = true
+		}
+		ids = append(ids, ex.ExerciseID)
+	}
+	if !foundMove {
+		return fmt.Errorf("exercise entry %d not found in workout %d", exerciseID, workoutID)
+	}
+	if !foundBefore {
+		return fmt.Errorf("before entry %d not found in workout %d", beforeExerciseID, workoutID)
+	}
+	if beforeExerciseID == 0 {
+		ids = append(ids, exerciseID)
+	}
+	timestamp := now()
+	for i, id := range ids {
+		if _, err := s.DB.Exec(`UPDATE exercises SET sequence_no = ?, updated_at = ? WHERE id = ?`, i+1, timestamp, id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Store) ResolveWorkoutExerciseEntry(workoutID, exerciseTemplateID int) (int, error) {
+	var entryID int
+	err := s.DB.QueryRow(`SELECT id FROM exercises WHERE workout_id = ? AND template_id = ? ORDER BY sequence_no ASC, id ASC LIMIT 1`, workoutID, exerciseTemplateID).Scan(&entryID)
+	if err == sql.ErrNoRows {
+		return 0, fmt.Errorf("exercise %d not found in workout %d", exerciseTemplateID, workoutID)
+	}
+	return entryID, err
+}
+
+func (s *Store) SetTemplateExerciseSetCount(templateID, exerciseTemplateID, setCount int) error {
+	if setCount < 0 {
+		return fmt.Errorf("set count must be >= 0")
+	}
+	res, err := s.DB.Exec(`UPDATE workout_template_exercises SET set_count = ?, updated_at = ? WHERE workout_template_id = ? AND exercise_template_id = ?`, nullableZero(setCount), now(), templateID, exerciseTemplateID)
+	if err != nil {
+		return err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return fmt.Errorf("exercise %d not found in template %d", exerciseTemplateID, templateID)
+	}
+	return nil
+}
+
+func (s *Store) ReplaceTemplateExercise(templateID, fromExerciseTemplateID, toExerciseTemplateID int) error {
+	res, err := s.DB.Exec(`
+		UPDATE workout_template_exercises
+		SET exercise_template_id = ?, updated_at = ?
+		WHERE workout_template_id = ? AND exercise_template_id = ?
+	`, toExerciseTemplateID, now(), templateID, fromExerciseTemplateID)
+	if err != nil {
+		return err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return fmt.Errorf("exercise %d not found in template %d", fromExerciseTemplateID, templateID)
+	}
+	return nil
+}
+
+func (s *Store) MoveTemplateExercise(templateID, exerciseTemplateID, beforeExerciseTemplateID int) error {
+	exercises, err := s.GetTemplateExercises(templateID)
+	if err != nil {
+		return err
+	}
+	moveLinkID := 0
+	for _, ex := range exercises {
+		if ex.ExerciseID == exerciseTemplateID {
+			moveLinkID = ex.LinkID
+			break
+		}
+	}
+	if moveLinkID == 0 {
+		return fmt.Errorf("exercise %d not found in template %d", exerciseTemplateID, templateID)
+	}
+	ids := make([]int, 0, len(exercises))
+	foundBefore := beforeExerciseTemplateID == 0
+	for _, ex := range exercises {
+		if ex.ExerciseID == exerciseTemplateID {
+			continue
+		}
+		if ex.ExerciseID == beforeExerciseTemplateID {
+			ids = append(ids, moveLinkID)
+			foundBefore = true
+		}
+		ids = append(ids, ex.LinkID)
+	}
+	if !foundBefore {
+		return fmt.Errorf("before exercise %d not found in template %d", beforeExerciseTemplateID, templateID)
+	}
+	if beforeExerciseTemplateID == 0 {
+		ids = append(ids, moveLinkID)
+	}
+	timestamp := now()
+	for i, id := range ids {
+		if _, err := s.DB.Exec(`UPDATE workout_template_exercises SET sequence_no = ?, updated_at = ? WHERE id = ?`, i+1, timestamp, id); err != nil {
 			return err
 		}
 	}
