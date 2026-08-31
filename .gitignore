@@ -16,3 +16,7 @@
 fish_variables
 /.config/mimeapps.list
 /AGENTS.md
+
+# Editor/application backup files
+*.bak
+*.dark-backup
