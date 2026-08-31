@@ -14,11 +14,8 @@ has_helium_window() {
     jq -e 'any(.[]; ((.app_id // "") | test("^(helium|Helium|helium-browser)$")))' >/dev/null
 }
 
-# Direct niri startup was firing Helium too early: the process briefly started
-# but did not leave a window. Wait for the session to settle, then retry until
-# niri actually sees a Helium window.
-sleep 8
-
+# Launch immediately. If an early launch fails to create a window, retry while
+# polling niri rather than imposing a fixed delay on every successful startup.
 for attempt in 1 2 3; do
   if has_helium_window; then
     log "Helium window already present"
@@ -27,11 +24,14 @@ for attempt in 1 2 3; do
 
   log "Starting Helium (attempt $attempt)"
   helium-browser >>"$log_file" 2>&1 &
-  sleep 10
+
+  for _ in {1..20}; do
+    sleep 0.5
+    if has_helium_window; then
+      log "Helium window present"
+      exit 0
+    fi
+  done
 done
 
-if has_helium_window; then
-  log "Helium window present after retry"
-else
-  log "Helium autostart gave up: no niri window detected"
-fi
+log "Helium autostart gave up: no niri window detected"

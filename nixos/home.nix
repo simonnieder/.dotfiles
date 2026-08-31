@@ -13,7 +13,7 @@ let
     };
 
   managedConfigEntries = builtins.mapAttrs mkConfigEntry
-    (builtins.readDir (/. + dotfilesConfigDir));
+    (builtins.readDir ../.config);
 in
 {
   imports = [
@@ -28,6 +28,14 @@ in
   xdg.configFile = managedConfigEntries;
 
   programs.codexDesktopLinux.enable = true;
+
+  # Nixpkgs ships the GUI as `obsidian` and the native CLI as
+  # `obsidian-cli`. The GUI cannot register the CLI itself because its NixOS
+  # wrapper ultimately runs an executable named `electron`.
+  programs.obsidian = {
+    enable = true;
+    cli.enable = true;
+  };
 
   systemd.user.services.cliphist-text = {
     Unit = {
@@ -73,7 +81,7 @@ in
   };
 
   services.wlsunset = {
-    enable = false;
+    enable = true;
     sunrise = "05:00";
     sunset = "20:30";
     temperature = {
@@ -81,6 +89,18 @@ in
       night = 4000;
     };
     gamma = 1.0;
+  };
+
+  # The command-center toggle may stop wlsunset for the rest of the night.
+  # Start it again the next morning so the manual override never persists.
+  systemd.user.timers.wlsunset-auto-enable = {
+    Unit.Description = "Re-enable automatic night mode";
+    Timer = {
+      OnCalendar = "*-*-* 05:00:00";
+      Persistent = true;
+      Unit = "wlsunset.service";
+    };
+    Install.WantedBy = [ "timers.target" ];
   };
 
   home.sessionVariables = {

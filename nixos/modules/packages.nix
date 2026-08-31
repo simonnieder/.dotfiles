@@ -9,6 +9,7 @@ let
   }).default;
 
   nordvpn-cli = pkgs.callPackage ../pkgs/nordvpn-cli.nix { };
+  t3code-nightly = pkgs.callPackage ../pkgs/t3code-nightly.nix { };
 
   helium-browser = pkgs.appimageTools.wrapType2 rec {
     pname = "helium-browser";
@@ -151,18 +152,19 @@ in
     stow
     eza
     fzf
+    btop
     starship
     lazygit
     diff-so-fancy
-    mpv
+    (pkgs.mpv.override { scripts = [ pkgs.mpvScripts.uosc ]; })
     yt-dlp
     syncthing
     timewarrior
     nordvpn-cli
 
     # apps referenced in config
-    obsidian
     zotero
+    xournalpp
     telegram-desktop
     thunderbird
     spotify
@@ -170,6 +172,7 @@ in
     qbittorrent
     ollama
     zed-editor
+    t3code-nightly
     zen-browser
     helium-browser
     chromium

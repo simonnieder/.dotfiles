@@ -8,6 +8,13 @@ foreground = #cdcdcd
 
 cursor-style = block
 
+# Keep tabs available without permanently spending vertical space on the bar.
+window-show-tab-bar = never
+gtk-custom-css = ~/.config/ghostty/compact-tabs.css
+
+# Ctrl+Tab / Ctrl+Shift+Tab still cycle tabs; open the visual overview on demand.
+keybind = ctrl+shift+space=toggle_tab_overview
+
 selection-foreground = #cdcdcd
 selection-background = #252530
 

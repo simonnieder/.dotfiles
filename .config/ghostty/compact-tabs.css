@@ -1,0 +1,20 @@
+/* Keep Ghostty's wide tabs, but reduce the Libadwaita tab bar height. */
+tabbar tabbox {
+  min-height: 32px;
+  padding: 0;
+}
+
+tabbar tabbox tab {
+  min-height: 32px;
+  padding: 0 8px;
+}
+
+tabbar tabbox tab button {
+  min-width: 20px;
+  min-height: 20px;
+  padding: 0;
+}
+
+tabbar tabbox tab label {
+  font-size: 12px;
+}

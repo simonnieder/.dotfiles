@@ -36,4 +36,4 @@ done | rofi -dmenu -i -p 'Windows' -theme "$rofi_theme")"
 
 window_id="${choice%%$'\t'*}"
 [[ -n "$window_id" ]] || exit 0
-niri msg action focus-window "$window_id"
+niri msg action focus-window --id "$window_id"

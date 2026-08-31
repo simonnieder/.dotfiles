@@ -10,7 +10,14 @@
   networking.hostName = "nixos";
 
   # Current machine's laptop/power behavior.
-  services.tlp.enable = true;
+  services.tlp = {
+    enable = true;
+    settings = {
+      PLATFORM_PROFILE_ON_AC = "balanced";
+      PLATFORM_PROFILE_ON_BAT = "balanced";
+      PLATFORM_PROFILE_ON_SAV = "balanced";
+    };
+  };
   services.logind.settings.Login = {
     HandlePowerKey = "ignore";
     # Let logind own lid sleep. Niri should not also trigger a sleep command on
@@ -29,11 +36,12 @@
   # Tell the kernel where to resume from hibernation.
   boot.resumeDevice = "/dev/disk/by-uuid/48995cae-2c41-4c73-b12c-16125c0c1c4d";
 
-  # The Realtek 8922AE Wi-Fi path logs ACPI/rtw89 errors around suspend on this
-  # machine. Disable the fragile PCIe low-power handshakes and reload the driver
-  # around sleep so it cannot wedge resume or prevent s2idle from reaching a sane
-  # state.
+  # The Realtek 8922AE Wi-Fi path logs ACPI/rtw89 errors around suspend and
+  # loses beacons while connected. Disable its fragile PCIe handshakes and Wi-Fi
+  # power saving, then reload the driver around sleep so it cannot wedge resume
+  # or repeatedly drop the connection.
   boot.extraModprobeConfig = ''
+    options rtw89_core disable_ps_mode=y
     options rtw89_pci disable_aspm_l1ss=y disable_clkreq=y
   '';
 

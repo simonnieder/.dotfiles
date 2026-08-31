@@ -1,7 +1,7 @@
 git:
-  pagers:
+  diffRenderers:
     - colorArg: always
-      pager: diff-so-fancy --colors --tabs=4
+      command: diff-so-fancy --colors --tabs=4
 gui:
   authorColors:
     "*": "#f3be7c"

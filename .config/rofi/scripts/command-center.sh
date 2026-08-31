@@ -10,6 +10,7 @@ choice="$(cat <<'EOF' | rofi -dmenu -i -p "command" -theme "$rofi_theme"
 󰞅  Emoji
 󱎫  Time Tracker
 󰖔  Toggle night mode
+󰍹  Toggle laptop screen
   Power
 󰑓  Reload niri
 󰑓  Restart waybar
@@ -33,6 +34,9 @@ case "$choice" in
     ;;
   "󰖔  Toggle night mode")
     exec "$HOME/.config/rofi/scripts/night-mode-toggle.sh"
+    ;;
+  "󰍹  Toggle laptop screen")
+    exec "$HOME/.config/niri/toggle-laptop-brightness.sh"
     ;;
   "󰅌  Clipboard")
     exec "$HOME/.config/rofi/scripts/clipboard.sh"
@@ -61,7 +65,7 @@ case "$choice" in
     for _ in {1..30}; do
       new_id="$(comm -13 <(printf '%s\n' "$before_ids") <(niri msg -j windows | jq -r '.[] | select(.app_id == "com.mitchellh.ghostty" or (.title // "" | test("NixOS Rebuild"))) | .id' | sort) | tail -n1)"
       if [[ -n "$new_id" ]]; then
-        niri msg action focus-window "$new_id"
+        niri msg action focus-window --id "$new_id"
         niri msg action move-window-to-floating
         exit 0
       fi

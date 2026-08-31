@@ -1,5 +1,7 @@
 alias vim="nvim"
 alias tsess="~/.config/scripts/tmux-session-dispensary.sh"
+alias caffeinate="~/.config/scripts/caffeine.sh"
+alias herdrclaw="herdr --remote openclaw"
 alias ls='eza -lha --group-directories-first --icons=auto'
 
 # Disable fish greeting

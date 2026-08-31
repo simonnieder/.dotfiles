@@ -37,6 +37,9 @@ input {
 
     touchpad {
         tap
+        // Register a physical press anywhere on the clickpad; finger count
+        // determines left/right/middle click instead of a small bottom area.
+        click-method "clickfinger"
         natural-scroll
         accel-speed 0.1
         scroll-factor 0.2
@@ -311,8 +314,17 @@ binds {
     XF86AudioNext  allow-when-locked=true { spawn-sh "playerctl next"; }
 
     // --- Brightness ---
+    // The lock-icon F9 key is reported as plain F9 on this Lenovo; keep the
+    // standard screen-saver keysym too in case firmware hotkey mode changes.
+    F9                    allow-when-locked=true { spawn-sh "$HOME/.config/niri/toggle-laptop-brightness.sh"; }
+    XF86ScreenSaver       allow-when-locked=true { spawn-sh "$HOME/.config/niri/toggle-laptop-brightness.sh"; }
     XF86MonBrightnessUp   allow-when-locked=true { spawn "brightnessctl" "set" "+10%"; }
     XF86MonBrightnessDown allow-when-locked=true { spawn "brightnessctl" "set" "10%-"; }
+
+    // --- Keyboard backlight ---
+    XF86KbdLightOnOff      allow-when-locked=true { spawn-sh "$HOME/.config/niri/cycle-keyboard-backlight.sh"; }
+    XF86KbdBrightnessUp    allow-when-locked=true { spawn "brightnessctl" "-d" "platform::kbd_backlight" "set" "+1"; }
+    XF86KbdBrightnessDown  allow-when-locked=true { spawn "brightnessctl" "--min-value=0" "-d" "platform::kbd_backlight" "set" "1-"; }
 }
 
 // ==============

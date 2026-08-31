@@ -105,6 +105,8 @@ in
   # Enable networking.
   networking.networkmanager.enable = true;
   networking.networkmanager.dns = "dnsmasq";
+  # Avoid beacon-loss disconnects on the Realtek rtw89 adapter.
+  networking.networkmanager.wifi.powersave = false;
 
   environment.etc."NetworkManager/dnsmasq.d/social-block.conf".text = ''
     addn-hosts=/run/social-block/hosts
@@ -168,6 +170,7 @@ in
   };
 
   xdg.mime.defaultApplications = {
+    "text/x-python" = [ "dev.zed.Zed.desktop" ];
     "application/pdf" = [ "org.gnome.Evince.desktop" ];
     "text/html" = [ "helium.desktop" ];
     "application/xhtml+xml" = [ "helium.desktop" ];
@@ -197,6 +200,7 @@ in
   fonts.packages = with pkgs; [
     nerd-fonts.jetbrains-mono
     nerd-fonts.fira-code
+    atkinson-hyperlegible
     atkinson-hyperlegible-next
     corefonts
   ];
@@ -250,6 +254,7 @@ in
     serviceConfig = {
       ExecStart = "${nordvpn-cli}/bin/nordvpnd";
       Restart = "on-failure";
+      Group = "nordvpn";
       RuntimeDirectory = "nordvpn";
       StateDirectory = "nordvpn";
     };
