@@ -13,6 +13,10 @@ import { Data } from "effect";
 export const BACKEND_NAMES = ["pi", "claude", "codex"] as const;
 export type BackendName = (typeof BACKEND_NAMES)[number];
 
+/** Backends exposed by the extension. Codex remains a dormant implementation. */
+export const ENABLED_BACKEND_NAMES = ["pi", "claude"] as const satisfies
+  ReadonlyArray<BackendName>;
+
 /** Who initiated the session. User asides stay out of model-facing tooling. */
 export type SubagentOrigin = "model" | "btw";
 

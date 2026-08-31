@@ -18,7 +18,7 @@ import {
   SubagentManagerLive,
   type SubagentManagerShape,
 } from "./src/manager.ts";
-import { runTool } from "./src/runtime.ts";
+import { createSubagentRuntime, runTool } from "./src/runtime.ts";
 
 const TestRegistryLive = Layer.sync(BackendRegistry, () => {
   const backends: SubagentBackend[] = [
@@ -71,6 +71,19 @@ async function withManager(
     await runtime.dispose();
   }
 }
+
+test("the production registry does not expose the dormant Codex backend", async () => {
+  const runtime = createSubagentRuntime();
+  try {
+    const manager = await runtime.runPromise(SubagentManager);
+    await assert.rejects(
+      runTool(runtime, manager.spawn("codex", task("must not start"))),
+      /Unknown backend "codex"/,
+    );
+  } finally {
+    await runtime.dispose();
+  }
+});
 
 test("stub subagent completes and delivers a final result", async () => {
   await withManager(async (manager, runtime) => {

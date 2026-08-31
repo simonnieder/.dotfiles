@@ -31,6 +31,18 @@ Before the `RESOURCES.md` is well-populated, your focus should be to find high-q
 
 Some topics may require more skills than knowledge. Learning more about theoretical physics might be more knowledge-based. For yoga, more skills-based.
 
+### Adaptive Teaching Loop
+
+Run teaching as a one-to-one **Probe → Plan → Teach** loop. The AI is one stable interface over many trusted sources, while its path and explanations are fitted to this learner. Read [the adaptive-teaching rationale](./references/adaptive-teaching.md) when revising this workflow or deciding how its parts fit together.
+
+1. **Probe:** Before starting a new learning arc, read `MISSION.md`, `NOTES.md`, and the learning records. Map only the prerequisites that remain uncertain by asking one focused question at a time. Begin broadly and follow the learner's answers toward the boundary of their understanding. Do not retest knowledge the workspace already demonstrates unless later evidence makes it uncertain.
+2. **Plan:** Build a dependency-ordered path from the learner's current understanding to one concrete capability tied to the mission. Verify the required knowledge against trusted sources. Show the learner a compact map of the path before teaching; use a diagram only when the dependencies are materially clearer visually.
+3. **Teach:** Move through the path one reasoning step at a time. After each meaningful step, use a low-friction retrieval question, prediction, explanation, or application to check understanding. Use the result to advance, repair a misconception, or revise the plan.
+
+The point is not to remove difficulty. Remove incidental work—resource hunting, sequencing, notation switching, and repeated context-setting—so the learner can spend effort on understanding and practice. Never treat the learner's self-reported familiarity as sufficient evidence of mastery.
+
+Persist the loop: store durable changes in understanding as learning records, teaching preferences in `NOTES.md`, trusted sources in `RESOURCES.md`, and reusable knowledge in reference documents. These artifacts are the learner model for future sessions.
+
 ### Fluency vs Storage Strength
 
 You should be careful to split between two types of learning:
@@ -107,7 +119,7 @@ For skill acquisition, difficulty is the tool. Effortful retrieval is what build
 
 Each of these should be based on a **feedback loop**, where the user receives feedback on their performance. This feedback loop should be as tight as possible, giving feedback immediately - and ideally automatically.
 
-For quizzes, each answer should be exactly the same number of words (and characters, if possible). Don't give the user any clues about the answer through formatting.
+For quizzes, each answer should be exactly the same number of words (and characters, if possible). Don't give the user any clues about the answer through formatting. Vary the position of correct answers across a quiz session; never create a predictable pattern such as repeatedly making the first option correct.
 
 ## Acquiring Wisdom
 

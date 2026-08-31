@@ -1,6 +1,6 @@
 /**
- * Subagents — spawn background subagents on one of three backends
- * (pi, Claude Code, Codex) unified behind a single Effect service interface.
+ * Subagents — spawn background subagents on the pi or Claude Code harness,
+ * unified behind a single Effect service interface.
  *
  * Tools (for the parent LLM):
  * - subagent_spawn: fire-and-forget spawn (prompt, title, agent, working_dir,
@@ -15,9 +15,8 @@
  *
  * Architecture: Effect v4 generators throughout (backends -> manager ->
  * runtime); this file is the async boundary where tool handlers run effects
- * against one shared ManagedRuntime. All three backends are real: pi runs
- * in-process SDK sessions, claude drives the Claude Agent SDK, codex speaks
- * JSON-RPC to a scoped `codex app-server` process.
+ * against one shared ManagedRuntime. Both enabled backends are real: pi runs
+ * in-process SDK sessions and claude drives the Claude Agent SDK.
  */
 
 import * as fs from "node:fs";
@@ -42,7 +41,6 @@ import { Markdown, Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { deriveBtwTitle, isModelVisible } from "./src/by-the-way.ts";
 import {
-  BACKEND_NAMES,
   formatElapsed,
   latestText,
   REASONING_EFFORTS,
@@ -60,6 +58,7 @@ import {
   SUBAGENT_CANCEL_TOOL_DESCRIPTION,
   SUBAGENT_CHECK_PARAMETER_DESCRIPTIONS,
   SUBAGENT_CHECK_TOOL_DESCRIPTION,
+  SUBAGENT_HARNESS_SCHEMA,
   SUBAGENT_LIST_TOOL_DESCRIPTION,
   SUBAGENT_SPAWN_PARAMETER_DESCRIPTIONS,
   SUBAGENT_SPAWN_PROMPT_GUIDELINES,
@@ -280,9 +279,7 @@ export default function (pi: ExtensionAPI) {
       name: Type.String({
         description: SUBAGENT_SPAWN_PARAMETER_DESCRIPTIONS.name,
       }),
-      harness: StringEnum(BACKEND_NAMES, {
-        description: SUBAGENT_SPAWN_PARAMETER_DESCRIPTIONS.harness,
-      }),
+      harness: SUBAGENT_HARNESS_SCHEMA,
       working_dir: Type.Optional(
         Type.String({
           description: SUBAGENT_SPAWN_PARAMETER_DESCRIPTIONS.workingDir,
