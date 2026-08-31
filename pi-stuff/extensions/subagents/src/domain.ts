@@ -13,8 +13,8 @@ import { Data } from "effect";
 export const BACKEND_NAMES = ["pi", "claude", "codex"] as const;
 export type BackendName = (typeof BACKEND_NAMES)[number];
 
-/** Backends exposed by the extension. Codex remains a dormant implementation. */
-export const ENABLED_BACKEND_NAMES = ["pi", "claude"] as const satisfies
+/** Backends exposed by the extension. External CLI backends remain dormant. */
+export const ENABLED_BACKEND_NAMES = ["pi"] as const satisfies
   ReadonlyArray<BackendName>;
 
 /** Who initiated the session. User asides stay out of model-facing tooling. */

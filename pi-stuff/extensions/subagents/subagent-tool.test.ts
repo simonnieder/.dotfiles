@@ -9,13 +9,13 @@ import {
   SUBAGENT_SPAWN_TOOL_DESCRIPTION,
 } from "./src/prompt.ts";
 
-test("the public harness schema rejects disabled Codex before tool execution", () => {
+test("the public harness schema only accepts pi", () => {
   assert.equal(Value.Check(SUBAGENT_HARNESS_SCHEMA, "pi"), true);
-  assert.equal(Value.Check(SUBAGENT_HARNESS_SCHEMA, "claude"), true);
+  assert.equal(Value.Check(SUBAGENT_HARNESS_SCHEMA, "claude"), false);
   assert.equal(Value.Check(SUBAGENT_HARNESS_SCHEMA, "codex"), false);
 });
 
-test("model-facing subagent metadata does not advertise Codex", () => {
+test("model-facing subagent metadata only advertises pi", () => {
   const metadata = [
     SUBAGENT_SPAWN_TOOL_DESCRIPTION,
     SUBAGENT_SPAWN_PROMPT_SNIPPET,
@@ -23,5 +23,5 @@ test("model-facing subagent metadata does not advertise Codex", () => {
     ...Object.values(SUBAGENT_SPAWN_PARAMETER_DESCRIPTIONS),
   ].join("\n");
 
-  assert.doesNotMatch(metadata, /codex/i);
+  assert.doesNotMatch(metadata, /claude/i);
 });

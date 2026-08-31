@@ -1,10 +1,10 @@
 /**
- * Subagents — spawn background subagents on the pi or Claude Code harness,
+ * Subagents — spawn background subagents on the in-process pi harness,
  * unified behind a single Effect service interface.
  *
  * Tools (for the parent LLM):
- * - subagent_spawn: fire-and-forget spawn (prompt, title, agent, working_dir,
- *   model, reasoning_effort). Max 4 running at once across all backends.
+ * - subagent_spawn: fire-and-forget spawn (prompt, title, harness, profile,
+ *   working_dir). Max 4 running at once across all backends.
  * - subagent_wait: block until the listed subagents settle, return results.
  * - subagent_cancel: stop one or more running subagents.
  * - subagent_check: peek at a subagent's status and recent activity.
@@ -15,8 +15,8 @@
  *
  * Architecture: Effect v4 generators throughout (backends -> manager ->
  * runtime); this file is the async boundary where tool handlers run effects
- * against one shared ManagedRuntime. Both enabled backends are real: pi runs
- * in-process SDK sessions and claude drives the Claude Agent SDK.
+ * against one shared ManagedRuntime. The enabled pi backend runs in-process
+ * SDK sessions.
  */
 
 import * as fs from "node:fs";
@@ -43,7 +43,6 @@ import { deriveBtwTitle, isModelVisible } from "./src/by-the-way.ts";
 import {
   formatElapsed,
   latestText,
-  REASONING_EFFORTS,
   type SubagentSnapshot,
 } from "./src/domain.ts";
 import {
@@ -51,6 +50,10 @@ import {
   formatContextUtilization,
 } from "./src/format.ts";
 import { SubagentManager, type SubagentManagerShape } from "./src/manager.ts";
+import {
+  selectSubagentProfile,
+  SUBAGENT_PROFILES,
+} from "./src/model-profile.ts";
 import {
   buildSubagentResultMessage,
   buildSubagentSpawnResult,
@@ -285,16 +288,9 @@ export default function (pi: ExtensionAPI) {
           description: SUBAGENT_SPAWN_PARAMETER_DESCRIPTIONS.workingDir,
         }),
       ),
-      model: Type.Optional(
-        Type.String({
-          description: SUBAGENT_SPAWN_PARAMETER_DESCRIPTIONS.model,
-        }),
-      ),
-      reasoning_effort: Type.Optional(
-        StringEnum(REASONING_EFFORTS, {
-          description: SUBAGENT_SPAWN_PARAMETER_DESCRIPTIONS.reasoningEffort,
-        }),
-      ),
+      profile: StringEnum(SUBAGENT_PROFILES, {
+        description: SUBAGENT_SPAWN_PARAMETER_DESCRIPTIONS.profile,
+      }),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const manager = await getManager();
@@ -306,14 +302,15 @@ export default function (pi: ExtensionAPI) {
       }
 
       const title = params.name.trim().slice(0, 160) || "subagent";
+      const selection = selectSubagentProfile(params.profile, harness);
       const snap = await runTool(
         getRuntime(),
         manager.spawn(harness, {
           prompt: params.prompt,
           title,
           cwd,
-          model: params.model,
-          reasoningEffort: params.reasoning_effort,
+          model: selection.model,
+          reasoningEffort: selection.reasoningEffort,
           parent: {
             parentCwd: ctx.cwd,
             projectTrusted: resolveChildProjectTrust({
@@ -689,6 +686,7 @@ export default function (pi: ExtensionAPI) {
     const manager = await getManager();
     let snap: SubagentSnapshot;
     try {
+      const selection = selectSubagentProfile("medium", "pi");
       snap = await runTool(
         getRuntime(),
         manager.spawn("pi", {
@@ -696,6 +694,8 @@ export default function (pi: ExtensionAPI) {
           prompt,
           title: deriveBtwTitle(prompt),
           cwd: ctx.cwd,
+          model: selection.model,
+          reasoningEffort: selection.reasoningEffort,
           parent: {
             parentCwd: ctx.cwd,
             projectTrusted: ctx.isProjectTrusted(),

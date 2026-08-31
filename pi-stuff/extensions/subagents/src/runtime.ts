@@ -8,14 +8,13 @@
 
 import { Cause, Exit, Layer, ManagedRuntime, type Effect } from "effect";
 import { BackendRegistry, type SubagentBackend } from "./backend.ts";
-import { claudeBackend } from "./backends/claude.ts";
 import { piBackend } from "./backends/pi.ts";
 import type { BackendName } from "./domain.ts";
 
 const BackendRegistryLive = Layer.sync(BackendRegistry, () => {
-  // The Codex implementation is intentionally dormant and can be re-enabled
-  // by importing and registering it here again.
-  const backends: SubagentBackend[] = [piBackend, claudeBackend];
+  // External CLI implementations are intentionally dormant and can be
+  // re-enabled by importing and registering them here again.
+  const backends: SubagentBackend[] = [piBackend];
   return new Map<BackendName, SubagentBackend>(
     backends.map((backend) => [backend.name, backend]),
   );

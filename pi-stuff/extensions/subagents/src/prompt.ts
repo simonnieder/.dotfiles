@@ -2,19 +2,20 @@
 
 import { StringEnum } from "@earendil-works/pi-ai";
 import { ENABLED_BACKEND_NAMES } from "./domain.ts";
+import { describeSubagentProfiles } from "./model-profile.ts";
 
 /** Describes subagent_spawn, including harnesses and the fixed concurrency cap. */
 export const SUBAGENT_SPAWN_TOOL_DESCRIPTION =
-  "Spawn a background subagent: a fully autonomous, headless agent with its own context window. You choose the harness it runs on: pi (in-process pi session, inherits this environment's tools and config) or claude (Claude Code). Fire-and-forget: this returns immediately with an id. The subagent's final output is queued back to you as a message when it settles, or collect it explicitly with subagent_wait. Children cannot orchestrate more agents/workflows or ask the user, and cannot see this conversation, so the prompt must be self-contained. Max 4 subagents can be running at once across all harnesses.";
+  `Spawn a background subagent: a fully autonomous, headless pi agent with its own context window. Choose one of these profiles: ${describeSubagentProfiles()}. Fire-and-forget: this returns immediately with an id. The subagent's final output is queued back to you as a message when it settles, or collect it explicitly with subagent_wait. Children cannot orchestrate more agents/workflows or ask the user, and cannot see this conversation, so the prompt must be self-contained. Max 4 subagents can be running at once.`;
 
 /** Adds background subagent delegation to the parent model's available-tools prompt. */
 export const SUBAGENT_SPAWN_PROMPT_SNIPPET =
-  "Spawn a background subagent on a chosen harness (pi or Claude Code; own context, normal tools) for a self-contained task";
+  "Spawn a background pi subagent (own context, normal tools) for a self-contained task";
 
 /** Guides the parent model to delegate standalone tasks and avoid unnecessary blocking waits. */
 export const SUBAGENT_SPAWN_PROMPT_GUIDELINES = [
   "Use subagent_spawn to delegate self-contained tasks that can run in the background; give it a complete, standalone prompt.",
-  "Pick the subagent harness deliberately: pi unless you have a reason to prefer Claude Code (e.g. the user asked for it, or the task suits that harness).",
+  `Choose the profile whose declared use matches the task: ${describeSubagentProfiles()}.`,
   "After subagent_spawn, keep working; results arrive automatically. Only call subagent_wait when you cannot proceed without the result.",
 ];
 
@@ -23,13 +24,9 @@ export const SUBAGENT_SPAWN_PARAMETER_DESCRIPTIONS = {
   prompt:
     "Task prompt for the subagent. Must be self-contained: include all needed context, file paths, and what to report back.",
   name: "Short human-readable name for this subagent, shown in listings and the UI",
-  harness:
-    'Harness to run the subagent on: "pi" (in-process pi session; inherits this environment) or "claude" (Claude Code). Choose deliberately per task.',
+  harness: 'Harness to run the subagent on; currently only "pi" is enabled.',
   workingDir: "Working directory (default: current working directory)",
-  model:
-    'Model hint, interpreted by the chosen harness (pi: "provider/model-id" or model id; claude: model alias like "sonnet"/"opus"). Omit for the harness default (pi inherits the current model).',
-  reasoningEffort:
-    "Reasoning effort on a shared scale; the harness maps it to its nearest native equivalent (pi thinking level or claude thinking budget). Omit for the harness default (pi inherits the current level).",
+  profile: `Execution profile for the subagent. ${describeSubagentProfiles()}`,
 };
 
 /** Strict public harness schema; disabled backends fail before tool execution. */
