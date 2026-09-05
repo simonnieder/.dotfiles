@@ -77,6 +77,10 @@ export default function modelSwitcher(pi: ExtensionAPI) {
   });
 
   pi.on("session_start", async (_event, ctx) => {
+    // This extension is a TUI convenience. Never overwrite a model selected
+    // by a headless child profile during session startup.
+    if (ctx.mode !== "tui") return;
+
     const preset = PRESETS.find(
       (candidate) => candidate.provider === ctx.model?.provider && candidate.model === ctx.model?.id,
     ) ?? SOL_MEDIUM;
@@ -84,7 +88,7 @@ export default function modelSwitcher(pi: ExtensionAPI) {
   });
 
   pi.on("model_select", async (event, ctx) => {
-    if (applying) return;
+    if (ctx.mode !== "tui" || applying) return;
     const preset = PRESETS.find(
       (candidate) => candidate.provider === event.model.provider && candidate.model === event.model.id,
     );

@@ -38,6 +38,15 @@ import { SendError, SpawnError } from "../domain.ts";
 
 const CHILD_SHUTDOWN_TIMEOUT_MS = 5_000;
 const CHILD_TOOL_CALL_TIMEOUT_MS = 3 * 60 * 1_000;
+const DISALLOWED_SUBAGENT_MODEL_ID = "gpt-5.6-sol";
+
+function isDisallowedSubagentModel(model: Model<any> | undefined) {
+  return model?.id === DISALLOWED_SUBAGENT_MODEL_ID;
+}
+
+function disallowedModelMessage() {
+  return `Subagents cannot run with ${DISALLOWED_SUBAGENT_MODEL_ID}.`;
+}
 
 /** Tools that headless children must not receive. Everything else stays enabled. */
 const CHILD_EXCLUDED_TOOL_NAMES = [
@@ -333,6 +342,9 @@ const makePiSession = (
         resolvePiModel(registry, task.model, task.parent.inheritedModel),
       catch: (error) => new SpawnError({ message: boundedError(error) }),
     });
+    if (isDisallowedSubagentModel(model)) {
+      return yield* new SpawnError({ message: disallowedModelMessage() });
+    }
     // pi's thinking levels ARE the shared reasoning-effort scale.
     const thinkingLevel = (task.reasoningEffort ??
       task.parent.inheritedThinkingLevel) as ThinkingLevel | undefined;
@@ -357,6 +369,11 @@ const makePiSession = (
         // the scope finalizer that owns cleanup is only registered later.
         try {
           await session.bindExtensions({ mode: "print" });
+          // Also check the resolved session model: when no explicit model was
+          // supplied, the SDK may choose the user's default model.
+          if (isDisallowedSubagentModel(session.model)) {
+            throw new Error(disallowedModelMessage());
+          }
         } catch (error) {
           await shutdownAndDisposeChildSession(session);
           throw error;

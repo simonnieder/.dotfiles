@@ -1,6 +1,6 @@
 ---
 name: low
 description: Lightweight self-hosted delegation and cheap fast work.
-model: opencode-go/glm-5.3-flash
+model: opencode/gpt-5.3-codex
 reasoning: max
 ---
