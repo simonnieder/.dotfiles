@@ -14,6 +14,8 @@ interface QuizOption {
 	description?: string;
 }
 
+const HERDR_BLOCKED_EVENT = "herdr:blocked";
+
 interface QuizDetails {
 	question: string;
 	options: QuizOption[];
@@ -123,9 +125,24 @@ export default function quizExtension(pi: ExtensionAPI) {
 				};
 			}
 
-			const selectedOptions = await ctx.ui.custom<number[] | null>((tui, theme, _keybindings, done) => {
-				let cursor = 0;
-				const selected = new Set<number>();
+			// The tool remains active while the user answers, but this is no longer
+			// model work. Keep the user informed and stop showing pi's working spinner
+			// for the duration of the interactive question.
+			ctx.ui.setWorkingVisible(false);
+			ctx.ui.notify("Quiz question ready — choose an answer and press Enter.", "info");
+			// The tool is intentionally waiting on the user, not doing model work.
+			// Herdr exposes this custom event so it can show the pane as blocked
+			// instead of incorrectly leaving it in the working state.
+			pi.events.emit(HERDR_BLOCKED_EVENT, {
+				active: true,
+				label: "Waiting for quiz answer",
+			});
+
+			let selectedOptions: number[] | null;
+			try {
+				selectedOptions = await ctx.ui.custom<number[] | null>((tui, theme, _keybindings, done) => {
+					let cursor = 0;
+					const selected = new Set<number>();
 
 				function toggle(index: number) {
 					if (selected.has(index)) selected.delete(index);
@@ -222,7 +239,12 @@ export default function quizExtension(pi: ExtensionAPI) {
 						if (matchesKey(data, Key.escape)) done(null);
 					},
 				};
-			});
+				});
+			} finally {
+				pi.events.emit(HERDR_BLOCKED_EVENT, { active: false });
+				// Restore the normal indicator before pi resumes the model turn.
+				ctx.ui.setWorkingVisible(true);
+			}
 
 			const details: QuizDetails = selectedOptions === null
 				? baseDetails
