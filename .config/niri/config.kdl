@@ -5,9 +5,9 @@
 // ==============
 // NAMED WORKSPACES (for startup app placement)
 // ==============
-workspace "1" { open-on-output "DP-2"; }
-workspace "2" { open-on-output "DP-2"; }
-workspace "3" { open-on-output "DP-2"; }
+workspace "1" { open-on-output "eDP-1"; }
+workspace "2" { open-on-output "eDP-1"; }
+workspace "3" { open-on-output "eDP-1"; }
 
 // ==============
 //    OUTPUTS
@@ -18,9 +18,9 @@ debug {
 	honor-xdg-activation-with-invalid-serial
 }
 
-output "DP-2" {
-    mode "1920x1080@60"
-    scale 1.0
+output "eDP-1" {
+    mode "1920x1200@60"
+    scale 1.25
     position x=0 y=0
 }
 
@@ -75,23 +75,20 @@ layout {
     background-color "#000000"
 
     focus-ring {
-        // Colors from hypr colors.conf
-        active-color   "#8d9199"   // $outline
-        inactive-color "#111318"   // $background
-        width 2
+        off
     }
 
     border {
         on
         width 2
-        active-color   "#8d9199"   // $outline
+        active-color   "#43474e"   // $outline-variant
         inactive-color "#111318"   // $background
         urgent-color   "#ffb4ab"   // $error
     }
 
     struts {
-        left 4
-        right 4
+        left 2
+        right 2
         bottom 4
 		top 4
     }
@@ -153,8 +150,7 @@ spawn-at-startup "spotify"
 
 // Background set to black in the output blocks above
 
-// Prefer dark GTK, but let matugen control the actual theme.
-spawn-sh-at-startup "gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'"
+// Keep the persisted system color scheme and let matugen generate its palette.
 spawn-sh-at-startup "systemctl --user restart xdg-desktop-portal-gtk"
 
 // ==============
@@ -166,9 +162,9 @@ binds {
 
     // --- Launch programs ---
     Mod+D      hotkey-overlay-title="Run an Application: rofi"  { spawn "rofi" "-show" "drun"; }
-    Mod+P      hotkey-overlay-title="Time Tracker: rofi"       { spawn-sh "$HOME/.config/rofi/scripts/time-tracker.sh"; }
+    Mod+P      hotkey-overlay-title="Time Tracker: Solidtime" { spawn-sh "$HOME/.config/rofi/scripts/time-tracker.sh"; }
     Mod+W      hotkey-overlay-title="Recent Windows: rofi"     { spawn-sh "$HOME/.config/rofi/scripts/recent-windows.sh"; }
-    Mod+Shift+Space hotkey-overlay-title="Command Center: rofi" { spawn-sh "$HOME/.config/rofi/scripts/command-center.sh"; }
+    Mod+Shift+Space repeat=false hotkey-overlay-title="Command Center: rofi" { spawn-sh "$HOME/.config/rofi/scripts/command-center.sh"; }
     Mod+Space  hotkey-overlay-title="Power Menu: rofi"          { spawn-sh "$HOME/.config/rofi/scripts/powermenu.sh"; }
     Mod+C      hotkey-overlay-title="Clipboard History: rofi"   { spawn-sh "$HOME/.config/rofi/scripts/clipboard.sh"; }
     Mod+Period hotkey-overlay-title="Emoji Picker: rofi"        { spawn-sh "$HOME/.config/rofi/scripts/emoji.sh"; }
@@ -177,10 +173,11 @@ binds {
     Mod+Z      hotkey-overlay-title="Focus Zed"            { spawn-sh "$HOME/.config/scripts/focus-app.sh zed zeditor"; }
     Mod+M      hotkey-overlay-title="Focus Telegram"           { spawn-sh "$HOME/.config/scripts/focus-app.sh telegram Telegram"; }
     Mod+N      hotkey-overlay-title="Focus Obsidian"           { spawn-sh "$HOME/.config/scripts/focus-app.sh obsidian obsidian"; }
+    Mod+G      hotkey-overlay-title="Open ChatGPT"           { spawn-sh "$HOME/.config/niri/open-chatgpt.sh"; }
     Mod+Return      hotkey-overlay-title="Focus Terminal"           { spawn-sh "$HOME/.config/scripts/focus-app.sh ghostty ghostty"; }
     Mod+E      hotkey-overlay-title="Open File Manager: nautilus" { spawn "nautilus"; }
-    Mod+Ctrl+Shift+L hotkey-overlay-title="Lock the Screen: hyprlock"  { spawn-sh "$HOME/.config/rofi/scripts/time-tracker.sh lock"; }
-    Mod+Ctrl+Shift+H hotkey-overlay-title="Hibernate"                   { spawn-sh "$HOME/.config/rofi/scripts/time-tracker.sh systemctl-break hibernate"; }
+    Mod+Ctrl+Shift+L hotkey-overlay-title="Lock the Screen: hyprlock"  { spawn-sh "$HOME/.config/scripts/session-power.sh lock"; }
+    Mod+Ctrl+Shift+H hotkey-overlay-title="Hibernate"                   { spawn-sh "$HOME/.config/scripts/session-power.sh hibernate"; }
 	Mod+X { spawn "voxtype" "record" "toggle"; }
 
     Mod+Shift+Q              { close-window; }
@@ -331,21 +328,34 @@ binds {
 // WINDOW RULES
 // ==============
 
-// --- Startup app placement (only during first 60s after launch) ---
+// --- App placement ---
+// The rules below pin every currently used app to its named workspace. The
+// apps are listed in the same left-to-right order as the current layout.
+// Niri's rules can choose a workspace, but not a column index; the order is
+// therefore best-effort for windows opened later.
+
+// Workspace 1: Ghostty, then T3 Code.
 window-rule {
-    match at-startup=true app-id=r#"^com\.mitchellh\.ghostty$"#
+    match app-id=r#"^com\.mitchellh\.ghostty$"#
     open-on-workspace "1"
 }
 
 window-rule {
-    match app-id=r#"^(helium|Helium|helium-browser)$"#
-    open-on-workspace "2"
-    open-maximized true
+    match app-id=r#"^t3code$"#
+    open-on-workspace "1"
 }
 
+// Keep Zed with the other development windows when it is opened.
 window-rule {
     match app-id=r#"^(zed|dev\.zed\.Zed)$"#
     open-on-workspace "1"
+    open-maximized true
+}
+
+// Workspace 2: Helium, Obsidian, Anki, then Solidtime.
+window-rule {
+    match app-id=r#"^(helium|Helium|helium-browser)$"#
+    open-on-workspace "2"
     open-maximized true
 }
 
@@ -355,12 +365,26 @@ window-rule {
     open-maximized true
 }
 
-// --- Float certain apps ---
 window-rule {
-    match app-id=r#"^org\.gnome\.Nautilus$"#
-    open-floating true
-    default-column-width { proportion 0.8; }
-    default-window-height { proportion 0.8; }
+    match app-id=r#"^anki$"#
+    open-on-workspace "2"
+}
+
+window-rule {
+    match app-id=r#"^solidtime$"#
+    open-on-workspace "2"
+}
+
+// Workspace 3: Spotify, Thunderbird, Telegram, then WhatsApp.
+window-rule {
+    match app-id=r#"^(spotify|Spotify)$"#
+    open-on-workspace "3"
+    open-floating false
+}
+
+window-rule {
+    match app-id=r#"^thunderbird$"#
+    open-on-workspace "3"
 }
 
 window-rule {
@@ -376,10 +400,19 @@ window-rule {
     open-floating false
 }
 
+// ChatGPT gets its own narrow column on the left of workspace 1.
 window-rule {
-    match app-id=r#"^(spotify|Spotify)$"#
-    open-on-workspace "3"
+    match app-id=r#"^chrome-chatgpt\.com__-Default$"#
     open-floating false
+    default-column-width { proportion 0.3333; }
+}
+
+// --- Float certain apps ---
+window-rule {
+    match app-id=r#"^org\.gnome\.Nautilus$"#
+    open-floating true
+    default-column-width { proportion 0.8; }
+    default-window-height { proportion 0.8; }
 }
 
 // Float system utilities

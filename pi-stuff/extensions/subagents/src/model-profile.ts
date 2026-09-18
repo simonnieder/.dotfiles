@@ -13,13 +13,22 @@ export const PROFILE_DIRECTORY = path.resolve(
   "profiles",
 );
 
+export const SUBAGENT_PROVIDERS = ["opencode-go", "openai-codex"] as const;
+export type SubagentProvider = (typeof SUBAGENT_PROVIDERS)[number];
+export const DEFAULT_SUBAGENT_PROVIDER: SubagentProvider = "opencode-go";
+
+const PROVIDER_PREFIX: Record<SubagentProvider, string> = {
+  "opencode-go": "opencode-go/",
+  "openai-codex": "openai-codex/",
+};
+
 type SubagentProfileDefinition = {
   readonly name: string;
   readonly description: string;
-  /** Full provider/model reference for the pi backend. */
+  /** Primary opencode-go provider/model reference for the pi backend. */
   readonly model: string;
-  /** Native model slug for the Codex backend, when supported. */
-  readonly codexModel?: string;
+  /** Optional openai-codex provider/model fallback for the pi backend. */
+  readonly fallbackModel?: string;
   readonly reasoningEffort: ReasoningEffort;
 };
 
@@ -64,13 +73,52 @@ function parseReasoning(value: string, filePath: string): ReasoningEffort {
   );
 }
 
+function providerModel(
+  frontmatter: Record<string, string>,
+  key: string,
+  provider: SubagentProvider,
+  filePath: string,
+): string;
+function providerModel(
+  frontmatter: Record<string, string>,
+  key: string,
+  provider: SubagentProvider,
+  filePath: string,
+  optional: true,
+): string | undefined;
+function providerModel(
+  frontmatter: Record<string, string>,
+  key: string,
+  provider: SubagentProvider,
+  filePath: string,
+  optional = false,
+): string | undefined {
+  const model = frontmatter[key]?.trim();
+  if (!model) {
+    if (optional) return undefined;
+    throw new Error(`Profile ${filePath} requires ${key}.`);
+  }
+  if (!model.startsWith(PROVIDER_PREFIX[provider])) {
+    throw new Error(
+      `Profile ${filePath} field ${key} must use provider ${provider}.`,
+    );
+  }
+  return model;
+}
+
 function loadProfile(filePath: string): SubagentProfileDefinition {
   const frontmatter = parseFrontmatter(readFileSync(filePath, "utf8"), filePath);
   return {
     name: required(frontmatter, "name", filePath),
     description: required(frontmatter, "description", filePath),
-    model: required(frontmatter, "model", filePath),
-    codexModel: frontmatter["codex-model"]?.trim() || undefined,
+    model: providerModel(frontmatter, "model", "opencode-go", filePath),
+    fallbackModel: providerModel(
+      frontmatter,
+      "fallback-model",
+      "openai-codex",
+      filePath,
+      true,
+    ),
     reasoningEffort: parseReasoning(required(frontmatter, "reasoning", filePath), filePath),
   };
 }
@@ -101,7 +149,7 @@ export const SUBAGENT_PROFILES = [...PROFILE_BY_NAME.keys()] as readonly string[
 export function describeSubagentProfiles(): string {
   return [...PROFILE_BY_NAME.values()]
     .map((profile) =>
-      `"${profile.name}" — ${profile.description} (${profile.model}, ${profile.reasoningEffort} reasoning)`,
+      `"${profile.name}" — ${profile.description} (${profile.model}, ${profile.fallbackModel ? `fallback ${profile.fallbackModel}` : "no fallback"}, ${profile.reasoningEffort} reasoning)`,
     )
     .join("; ");
 }
@@ -109,6 +157,7 @@ export function describeSubagentProfiles(): string {
 export function selectSubagentProfile(
   profileName: SubagentProfile,
   backend: BackendName,
+  provider: SubagentProvider = DEFAULT_SUBAGENT_PROVIDER,
 ): SubagentProfileSelection {
   const profile = PROFILE_BY_NAME.get(profileName);
   if (!profile) {
@@ -118,9 +167,14 @@ export function selectSubagentProfile(
   }
 
   const model = backend === "pi"
-    ? profile.model
-    : backend === "codex"
-      ? profile.codexModel
-      : undefined;
+    ? provider === "opencode-go"
+      ? profile.model
+      : profile.fallbackModel
+    : undefined;
+  if (backend === "pi" && !model) {
+    throw new Error(
+      `Profile ${JSON.stringify(profileName)} has no ${provider} model.`,
+    );
+  }
   return { model, reasoningEffort: profile.reasoningEffort };
 }

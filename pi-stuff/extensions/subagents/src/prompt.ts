@@ -2,11 +2,15 @@
 
 import { StringEnum } from "@earendil-works/pi-ai";
 import { ENABLED_BACKEND_NAMES } from "./domain.ts";
-import { describeSubagentProfiles } from "./model-profile.ts";
+import {
+  DEFAULT_SUBAGENT_PROVIDER,
+  describeSubagentProfiles,
+  SUBAGENT_PROVIDERS,
+} from "./model-profile.ts";
 
 /** Describes subagent_spawn, including harnesses and the fixed concurrency cap. */
 export const SUBAGENT_SPAWN_TOOL_DESCRIPTION =
-  `Spawn a background subagent: a fully autonomous, headless pi agent with its own context window. Choose one of these profiles: ${describeSubagentProfiles()}. Fire-and-forget: this returns immediately with an id. The subagent's final output is queued back to you as a message when it settles, or collect it explicitly with subagent_wait. Children cannot orchestrate more agents/workflows or ask the user, and cannot see this conversation, so the prompt must be self-contained. Max 4 subagents can be running at once.`;
+  `Spawn a background subagent: a fully autonomous, headless pi agent with its own context window. Choose one of these profiles: ${describeSubagentProfiles()}. Provider defaults to ${DEFAULT_SUBAGENT_PROVIDER}; use openai-codex as the fallback. Fire-and-forget: this returns immediately with an id. The subagent's final output is queued back to you as a message when it settles, or collect it explicitly with subagent_wait. Children cannot orchestrate more agents/workflows or ask the user, and cannot see this conversation, so the prompt must be self-contained. Max 4 subagents can be running at once.`;
 
 /** Adds background subagent delegation to the parent model's available-tools prompt. */
 export const SUBAGENT_SPAWN_PROMPT_SNIPPET =
@@ -16,6 +20,7 @@ export const SUBAGENT_SPAWN_PROMPT_SNIPPET =
 export const SUBAGENT_SPAWN_PROMPT_GUIDELINES = [
   "Use subagent_spawn to delegate self-contained tasks that can run in the background; give it a complete, standalone prompt.",
   `Choose the profile whose declared use matches the task: ${describeSubagentProfiles()}.`,
+  `Use ${DEFAULT_SUBAGENT_PROVIDER} first. If that subagent fails because the provider is unavailable or out of credits and the profile offers a fallback, retry the task once with provider openai-codex.`,
   "After subagent_spawn, keep working; results arrive automatically. Only call subagent_wait when you cannot proceed without the result.",
 ];
 
@@ -25,9 +30,14 @@ export const SUBAGENT_SPAWN_PARAMETER_DESCRIPTIONS = {
     "Task prompt for the subagent. Must be self-contained: include all needed context, file paths, and what to report back.",
   name: "Short human-readable name for this subagent, shown in listings and the UI",
   harness: 'Harness to run the subagent on; currently only "pi" is enabled.',
+  provider: `Model provider. Defaults to ${DEFAULT_SUBAGENT_PROVIDER}; choose openai-codex only as a fallback when opencode-go is unavailable or out of credits. Some profiles have no fallback.`,
   workingDir: "Working directory (default: current working directory)",
   profile: `Execution profile for the subagent. ${describeSubagentProfiles()}`,
 };
+
+export const SUBAGENT_PROVIDER_SCHEMA = StringEnum(SUBAGENT_PROVIDERS, {
+  description: SUBAGENT_SPAWN_PARAMETER_DESCRIPTIONS.provider,
+});
 
 /** Strict public harness schema; disabled backends fail before tool execution. */
 export const SUBAGENT_HARNESS_SCHEMA = StringEnum(ENABLED_BACKEND_NAMES, {
@@ -39,11 +49,13 @@ export function buildSubagentSpawnResult(options: {
   id: string;
   title: string;
   harness: string;
+  profile: string;
   modelLabel: string;
+  reasoningEffort: string;
   cwd: string;
 }) {
   return (
-    `Spawned subagent ${options.id} "${options.title}" (${options.harness}: ${options.modelLabel}, ${options.cwd}).\n` +
+    `Spawned subagent ${options.id} "${options.title}" (${options.harness}: ${options.modelLabel}, profile: ${options.profile}, reasoning: ${options.reasoningEffort}, ${options.cwd}).\n` +
     `It runs in the background. Its result will be delivered to you when it finishes, ` +
     `or use subagent_wait(ids: ["${options.id}"]) to block for it, subagent_cancel to stop it, subagent_check to peek, subagent_list to see all.`
   );

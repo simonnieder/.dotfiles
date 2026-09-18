@@ -14,6 +14,13 @@ const LUNA_HIGH: Preset = {
   label: "Luna 5.6 · high",
 };
 
+const LUNA_HIGH_OCG: Preset = {
+  provider: "opencode-go",
+  model: "gpt-5.6-luna",
+  thinking: "high",
+  label: "Luna 5.6 · high · ocg",
+};
+
 const SOL_MEDIUM: Preset = {
   provider: "openai-codex",
   model: "gpt-5.6-sol",
@@ -37,6 +44,7 @@ const GLM_53_FLASH_MAX: Preset = {
 
 const PRESETS: readonly Preset[] = [
   LUNA_HIGH,
+  LUNA_HIGH_OCG,
   SOL_MEDIUM,
   DEEPSEEK_V4_FLASH_FREE,
   GLM_53_FLASH_MAX,

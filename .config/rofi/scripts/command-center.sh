@@ -3,12 +3,15 @@ set -euo pipefail
 
 rofi_theme="$HOME/.config/rofi/launcher.rasi"
 
-choice="$(cat <<'EOF' | rofi -dmenu -i -p "command" -theme "$rofi_theme"
+# Return the original row number rather than the rendered label. This avoids
+# dispatch failures caused by icon/font text differing from the source string.
+choice="$(cat <<'EOF' | rofi -dmenu -i -format i -p "command" -theme "$rofi_theme"
 󰀻  Applications
 󰖲  Recent Windows
 󰅌  Clipboard
 󰞅  Emoji
 󱎫  Time Tracker
+󰔎  Toggle light/dark mode
 󰖔  Toggle night mode
 󰍹  Toggle laptop screen
   Power
@@ -23,43 +26,46 @@ EOF
 )"
 
 case "$choice" in
-  "󰀻  Applications")
+  0)
     exec rofi -show drun -theme "$rofi_theme"
     ;;
-  "󰖲  Recent Windows")
+  1)
     exec "$HOME/.config/rofi/scripts/recent-windows.sh"
     ;;
-  "󱎫  Time Tracker")
-    exec "$HOME/.config/rofi/scripts/time-tracker.sh"
-    ;;
-  "󰖔  Toggle night mode")
-    exec "$HOME/.config/rofi/scripts/night-mode-toggle.sh"
-    ;;
-  "󰍹  Toggle laptop screen")
-    exec "$HOME/.config/niri/toggle-laptop-brightness.sh"
-    ;;
-  "󰅌  Clipboard")
+  2)
     exec "$HOME/.config/rofi/scripts/clipboard.sh"
     ;;
-  "󰞅  Emoji")
+  3)
     exec "$HOME/.config/rofi/scripts/emoji.sh"
     ;;
-  "  Power")
+  4)
+    exec "$HOME/.config/rofi/scripts/time-tracker.sh"
+    ;;
+  5)
+    exec /run/current-system/sw/bin/bash "$HOME/.config/scripts/toggle-color-scheme.sh"
+    ;;
+  6)
+    exec "$HOME/.config/rofi/scripts/night-mode-toggle.sh"
+    ;;
+  7)
+    exec "$HOME/.config/niri/toggle-laptop-brightness.sh"
+    ;;
+  8)
     exec "$HOME/.config/rofi/scripts/powermenu.sh"
     ;;
-  "󰑓  Reload niri")
+  9)
     exec niri msg action load-config-file
     ;;
-  "󰑓  Restart waybar")
+  10)
     exec sh -c "$HOME/.config/waybar/restart_waybar.sh"
     ;;
-  "  Edit dotfiles")
+  11)
     exec zeditor "$HOME/.dotfiles"
     ;;
-  "  Edit NixOS config")
+  12)
     exec zeditor "$HOME/.dotfiles/nixos"
     ;;
-  "󰒲  Rebuild NixOS")
+  13)
     before_ids="$(niri msg -j windows | jq -r '.[].id' | sort)"
     ghostty --title="NixOS Rebuild" -e bash -lc "printf '\033]0;NixOS Rebuild\007'; $HOME/.dotfiles/nixos/rebuild.sh; echo; read -rp 'Press enter to close...'" &
     for _ in {1..30}; do
@@ -72,10 +78,10 @@ case "$choice" in
       sleep 0.1
     done
     ;;
-  "󰠮  Open wiki")
+  14)
     exec zeditor "$HOME/wiki"
     ;;
-  "󰲋  Open repos")
+  15)
     exec zeditor "$HOME/repos"
     ;;
 esac

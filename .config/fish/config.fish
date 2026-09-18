@@ -9,6 +9,8 @@ function fish_greeting
 end
 
 set -x RIPGREP_CONFIG_PATH ~/.config/rgrc
+# Keep SSH and terminal applications on the broadly available xterm entry.
+set -gx TERM xterm-256color
 fish_add_path $HOME/.npm-global/bin
 fish_add_path $HOME/.local/bin
 

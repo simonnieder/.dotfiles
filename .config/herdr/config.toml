@@ -1,0 +1,64 @@
+onboarding = false
+# Match the active Ghostty palette (~/.config/ghostty/config.ghostty).
+[theme]
+name = "catppuccin"
+
+auto_switch = false
+[theme.custom]
+panel_bg = "#141415"
+accent = "#6e94b2"
+red = "#d8647e"
+green = "#7fa563"
+yellow = "#f3be7c"
+blue = "#6e94b2"
+
+[keys]
+# Match tmux's prefix. The default Herdr pane/tab bindings already largely
+# follow tmux conventions: c new tab, h/j/k/l focus panes, v/- split, x close.
+prefix = "ctrl+space"
+reload_config = "prefix+r"
+# Keep the session navigator on its dedicated leader binding.
+goto = "prefix+g"
+
+# Cycle spaces with the outer-pair keys; cycle agents with the inner-pair keys.
+# Shift+hjkl stays free for pane swapping.
+previous_workspace = "prefix+{"
+next_workspace = "prefix+}"
+previous_agent = ["prefix+,", "prefix+l"]
+next_agent = "prefix+."
+switch_workspace = "prefix+shift+1..9"
+focus_agent = "prefix+alt+1..9"
+# Toggle to the most recently focused pane (typically the last agent), tmux-style.
+last_pane = "ctrl+tab"
+# Free prefix+l for workspace-local MRU navigation; right-arrow remains a convenient pane movement key.
+focus_pane_right = "prefix+right"
+
+[[keys.command]]
+key = "prefix+f"
+type = "popup"
+command = "~/.config/scripts/tmux-session-dispensary.sh"
+description = "open Herdr workspace"
+
+[[keys.command]]
+key = "prefix+shift+l"
+type = "plugin_action"
+command = "simonnieder.terminal-tab-title.last-workspace"
+description = "last workspace"
+
+[terminal]
+default_shell = "/run/current-system/sw/bin/fish"
+
+[ui]
+# Let terminal-native colour handling preserve the Ghostty appearance.
+mouse_capture = true
+# Tabs are automatically named from their active pane's directory by herdr-auto-tab-name.
+prompt_new_tab_name = false
+
+agent_panel_sort = "priority"
+[experimental]
+pane_history = false
+# Relay Kitty graphics protocol output (inline images in pi, etc.) to the attached client.
+kitty_graphics = true
+
+[ui.sound]
+enabled = false

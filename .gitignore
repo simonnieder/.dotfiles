@@ -2,6 +2,7 @@
 /.config/gtk-3.0/bookmarks
 /.config/gtk-4.0/servers
 # Private local configs
+/.gitconfig
 .config/fish/local.fish
 .config/mozilla/firefox
 .config/obsidian
@@ -16,6 +17,7 @@
 fish_variables
 /.config/mimeapps.list
 /AGENTS.md
+/agent-skills/create-flashcards/bin/ankiconnect
 
 # Editor/application backup files
 *.bak

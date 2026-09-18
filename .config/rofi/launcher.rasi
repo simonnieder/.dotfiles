@@ -12,7 +12,7 @@ configuration {
 	modi:                       "drun,run,window";
     show-icons:                 true;
     icon-theme: "Papirus";
-    display-drun:               "";
+    display-drun:               "";
     display-run:                "run";
     display-window:             "window";
 	drun-display-format:        "{name} [<span weight='light' size='small'><i>({generic})</i></span>]";
@@ -24,7 +24,7 @@ configuration {
 @import                          "./colors.rasi"
 
 * {
-  font: "JetBrainsMono Nerd Font Bold 13";
+  font: "JetBrainsMono Nerd Font SemiBold 13";
 }
 
 
@@ -32,31 +32,31 @@ configuration {
 window {
     /* properties for window widget */
     transparency:                "real";
-    location:                    center;
-    anchor:                      center;
+    location:                    north;
+    anchor:                      north;
     fullscreen:                  false;
     width:                       500px;
     x-offset:                    0px;
-    y-offset:                    0px;
-    opacity: 0.5;
-    background-color: @surface-dim;
+    y-offset:                    24px;
+    opacity: 0.94;
+    background-color: @surface;
 
     /* properties for all widgets */
     enabled:                     true;
     margin:                      0px;
     padding:                     0px;
     border: 2px solid;
-    border-color: 				@secondary;
-    border-radius:               4px;
+    border-color: 				@outline-variant;
+    border-radius:               12px;
     cursor:                      "default";
 }
 
 /*****----- Main Box -----*****/
 mainbox {
     enabled:                     true;
-    spacing:                     0px;
+    spacing:                     6px;
     margin:                      0px;
-    padding:                     0px;
+    padding:                     8px;
     border:                      0px solid;
     border-radius:               0px 0px 0px 0px;
     background-color:            transparent;
@@ -69,20 +69,21 @@ inputbar {
     spacing:                     0px;
     margin:                      0px;
     padding:                     0px;
-    border:                      0px 0px 1px 0px;
-    border-radius:               0px;
-    background-color:            @surface-dim;
-    text-color:                  @primary;
+    border:                      0px;
+    border-radius:               8px;
+    background-color:            transparent;
+    text-color:                  @on-surface-variant;
     children:                    [ "prompt", "entry" ];
 }
 
 prompt {
     enabled:                     true;
-    padding:                     8px;
-    border:                      0px 1px 0px 0px;
+    padding:                     8px 10px 8px 10px;
+    border:                      0px;
     border-radius:               0px;
     background-color:            inherit;
-    text-color:                  inherit;
+    text-color:                  @outline;
+    str:                         "";
 }
 textbox-prompt-colon {
     enabled:                     true;
@@ -93,12 +94,27 @@ textbox-prompt-colon {
 }
 entry {
     enabled:                     true;
-    padding:                     8px;
+    padding:                     8px 8px 8px 2px;
     background-color:            inherit;
-    text-color:                  inherit;
+    text-color:                  @on-surface;
     cursor:                      text;
     placeholder:                 "";
-    placeholder-color:           inherit;
+    placeholder-color:           @on-surface-variant;
+}
+
+/*****----- Messages -----*****/
+error-message {
+    enabled:                     true;
+    expand:                      true;
+    padding:                     12px 16px;
+    border:                      0px;
+    border-radius:               8px;
+    background-color:            @surface-container;
+    text-color:                  @on-surface-variant;
+}
+error-message textbox {
+    background-color:            transparent;
+    text-color:                  @on-surface-variant;
 }
 
 /*****----- Listview -----*****/
@@ -111,35 +127,35 @@ listview {
     scrollbar:                   false;
     layout:                      vertical;
     reverse:                     false;
-    fixed-height:                true;
+    fixed-height:                false;
     fixed-columns:               true;
     
-    spacing:                     0px;
+    spacing:                     2px;
     margin:                      0px;
-    padding:                     4px;
+    padding:                     0px;
     border:                      0px solid;
     border-radius:               0px;
-    border-color:                @surface-dim;
-    background-color:            @surface-dim;
-    text-color:                  @secondary;
+    border-color:                transparent;
+    background-color:            transparent;
+    text-color:                  @on-surface-variant;
     cursor:                      "default";
 }
 scrollbar {
     handle-width:                5px ;
-    handle-color:                @primary;
+    handle-color:                @outline;
     border-radius:               0px;
-    background-color:            @surface-dim;
+    background-color:            transparent;
 }
 
 /*****----- Elements -----*****/
 element {
     enabled:                     true;
-    spacing:                     10px;
+    spacing:                     12px;
     margin:                      0px;
-    padding:                     4px 16px;
-    border-radius:               4px;
+    padding:                     8px 12px;
+    border-radius:               8px;
     background-color:            transparent;
-    text-color:                  @primary;
+    text-color:                  @on-surface-variant;
     cursor:                      pointer;
 }
 element normal.normal {
@@ -149,8 +165,8 @@ element normal.urgent {
 element normal.active {
 }
 element selected.normal {
-  background-color: @on-secondary;
-  text-color: @secondary;
+  background-color: @surface-container-high;
+  text-color: @on-surface;
 }
 element selected.urgent {
   background-color: @error;

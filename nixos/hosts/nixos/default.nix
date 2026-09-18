@@ -16,21 +16,22 @@
       PLATFORM_PROFILE_ON_AC = "balanced";
       PLATFORM_PROFILE_ON_BAT = "balanced";
       PLATFORM_PROFILE_ON_SAV = "balanced";
+      STOP_CHARGE_THRESH_BAT0 = 1;
     };
   };
   services.logind.settings.Login = {
     HandlePowerKey = "ignore";
-    # Let logind own lid sleep. Niri should not also trigger a sleep command on
-    # lid-close, otherwise resume can immediately race into a second suspend.
+    # Let logind own lid sleep. The compositor must not trigger another sleep
+    # on lid-close, or resume can immediately race into a second suspend.
     HandleLidSwitch = "suspend-then-hibernate";
   };
 
-  # Keep suspend-then-hibernate, but avoid firmware/platform S4 on this laptop:
-  # write the hibernation image, then fully power off. Resume still restores from
-  # swap on the next power button/lid boot, but skips a buggy ACPI S4 wake path.
+  # A full shutdown makes this firmware alternate between two E820 memory maps.
+  # Linux then rejects the hibernation image as unsafe on the next cold boot.
+  # Keep the firmware in ACPI S4 so the memory map remains stable for resume.
   systemd.sleep.settings.Sleep = {
-    HibernateDelaySec = "45m";
-    HibernateMode = "shutdown";
+    HibernateDelaySec = "20m";
+    HibernateMode = "platform";
   };
 
   # Tell the kernel where to resume from hibernation.

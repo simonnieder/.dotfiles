@@ -1,16 +1,7 @@
 { pkgs, ... }:
 
 let
-  zen-browser = (import (builtins.fetchTarball {
-    url = "https://github.com/youwen5/zen-browser-flake/archive/90d4d395e2be09b2d314816dadd34660528c4ee4.tar.gz";
-    sha256 = "19m3mqdbd865drfwa11ay6dn5v0b0sqq9rjg54vvzcy4mqq4b6c4";
-  }) {
-    inherit pkgs;
-  }).default;
-
   nordvpn-cli = pkgs.callPackage ../pkgs/nordvpn-cli.nix { };
-  t3code-nightly = pkgs.callPackage ../pkgs/t3code-nightly.nix { };
-
   helium-browser = pkgs.appimageTools.wrapType2 rec {
     pname = "helium-browser";
     version = "0.13.3.1";
@@ -55,23 +46,31 @@ let
     '';
   };
 
+  t3code = pkgs.appimageTools.wrapType2 rec {
+    pname = "t3code";
+    version = "0.0.42";
+
+    src = pkgs.fetchurl {
+      url = "https://github.com/pingdotgg/t3code/releases/download/v${version}/T3-Code-${version}-x86_64.AppImage";
+      sha256 = "1x6dwfb5yp9hxmihj720a69ip4qixxrcfk4lldckmvf2mg6zrhcd";
+    };
+
+    appimageContents = pkgs.appimageTools.extract { inherit pname version src; };
+
+    extraInstallCommands = ''
+      install -Dm644 ${appimageContents}/t3code.desktop $out/share/applications/t3code.desktop
+      substituteInPlace $out/share/applications/t3code.desktop \
+        --replace-fail "Exec=AppRun" "Exec=t3code"
+      install -Dm644 ${appimageContents}/t3code.png $out/share/icons/hicolor/512x512/apps/t3code.png
+    '';
+  };
+
   spotify = pkgs.symlinkJoin {
     name = "spotify";
     paths = [ pkgs.spotify ];
     nativeBuildInputs = [ pkgs.makeWrapper ];
     postBuild = ''
       wrapProgram $out/bin/spotify --add-flags "--no-sandbox"
-    '';
-  };
-
-  android-studio = pkgs.symlinkJoin {
-    name = "android-studio";
-    paths = [ pkgs.android-studio ];
-    nativeBuildInputs = [ pkgs.makeWrapper ];
-    postBuild = ''
-      wrapProgram $out/bin/android-studio \
-        --set-default DISPLAY :0 \
-        --set-default QT_QPA_PLATFORM xcb
     '';
   };
 
@@ -100,6 +99,7 @@ in
     evince
     pdfpc
     loupe
+    guvcview
 
     # session / desktop
     niri
@@ -172,13 +172,10 @@ in
     qbittorrent
     ollama
     zed-editor
-    t3code-nightly
-    zen-browser
     helium-browser
-    chromium
+    t3code
     gh
     lazydocker
-    android-studio
     android-tools
     calibre
     anki
@@ -186,7 +183,6 @@ in
     digikam
     localsend
     discord
-    warp-terminal
     gnome-power-manager
   ];
 }

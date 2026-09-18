@@ -51,6 +51,7 @@ import {
 } from "./src/format.ts";
 import { SubagentManager, type SubagentManagerShape } from "./src/manager.ts";
 import {
+  DEFAULT_SUBAGENT_PROVIDER,
   selectSubagentProfile,
   SUBAGENT_PROFILES,
 } from "./src/model-profile.ts";
@@ -63,6 +64,7 @@ import {
   SUBAGENT_CHECK_TOOL_DESCRIPTION,
   SUBAGENT_HARNESS_SCHEMA,
   SUBAGENT_LIST_TOOL_DESCRIPTION,
+  SUBAGENT_PROVIDER_SCHEMA,
   SUBAGENT_SPAWN_PARAMETER_DESCRIPTIONS,
   SUBAGENT_SPAWN_PROMPT_GUIDELINES,
   SUBAGENT_SPAWN_PROMPT_SNIPPET,
@@ -283,6 +285,7 @@ export default function (pi: ExtensionAPI) {
         description: SUBAGENT_SPAWN_PARAMETER_DESCRIPTIONS.name,
       }),
       harness: SUBAGENT_HARNESS_SCHEMA,
+      provider: Type.Optional(SUBAGENT_PROVIDER_SCHEMA),
       working_dir: Type.Optional(
         Type.String({
           description: SUBAGENT_SPAWN_PARAMETER_DESCRIPTIONS.workingDir,
@@ -295,6 +298,7 @@ export default function (pi: ExtensionAPI) {
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const manager = await getManager();
       const harness = params.harness;
+      const provider = params.provider ?? DEFAULT_SUBAGENT_PROVIDER;
 
       const cwd = path.resolve(ctx.cwd, params.working_dir ?? ".");
       if (!fs.existsSync(cwd) || !fs.statSync(cwd).isDirectory()) {
@@ -302,7 +306,11 @@ export default function (pi: ExtensionAPI) {
       }
 
       const title = params.name.trim().slice(0, 160) || "subagent";
-      const selection = selectSubagentProfile(params.profile, harness);
+      const selection = selectSubagentProfile(
+        params.profile,
+        harness,
+        provider,
+      );
       const snap = await runTool(
         getRuntime(),
         manager.spawn(harness, {
@@ -335,7 +343,9 @@ export default function (pi: ExtensionAPI) {
               id: snap.id,
               title: snap.title,
               harness,
+              profile: params.profile,
               modelLabel: snap.meta.modelLabel ?? "?",
+              reasoningEffort: selection.reasoningEffort,
               cwd,
             }),
           },
@@ -345,7 +355,10 @@ export default function (pi: ExtensionAPI) {
           title: snap.title,
           cwd,
           harness,
+          provider,
+          profile: params.profile,
           model: snap.meta.modelLabel,
+          reasoningEffort: selection.reasoningEffort,
         },
       };
     },

@@ -33,13 +33,13 @@ chosen="$(printf '%s\n%s\n%s\n%s\n%s\n%s\n' \
 
 case "$chosen" in
   "$lock")
-    "$HOME/.config/rofi/scripts/time-tracker.sh" lock
+    "$HOME/.config/scripts/session-power.sh" lock
     ;;
   "$suspend")
-    run_confirmed 'sleep + hibernate' "$HOME/.config/rofi/scripts/time-tracker.sh" systemctl-break suspend-then-hibernate
+    run_confirmed 'sleep + hibernate' "$HOME/.config/scripts/session-power.sh" suspend-then-hibernate
     ;;
   "$hibernate")
-    run_confirmed 'hibernate' "$HOME/.config/rofi/scripts/time-tracker.sh" systemctl-break hibernate
+    run_confirmed 'hibernate' "$HOME/.config/scripts/session-power.sh" hibernate
     ;;
   "$logout")
     run_confirmed 'logout' niri msg action quit --skip-confirmation

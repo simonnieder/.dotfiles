@@ -13,7 +13,7 @@ let
     };
 
   managedConfigEntries = builtins.mapAttrs mkConfigEntry
-    (builtins.readDir ../.config);
+    (builtins.removeAttrs (builtins.readDir ../.config) [ "mimeapps.list" ]);
 in
 {
   imports = [
@@ -26,8 +26,25 @@ in
 
   xdg.enable = true;
   xdg.configFile = managedConfigEntries;
+  xdg.mimeApps = {
+    enable = true;
+    defaultApplications = {
+      "text/markdown" = [ "obsidian.desktop" ];
+      "text/x-markdown" = [ "obsidian.desktop" ];
+    };
+  };
+
+  home.file.".agents/skills".source =
+    sym "${homeDirectory}/.dotfiles/agent-skills";
+  home.file.".npmrc".source =
+    sym "${homeDirectory}/.dotfiles/.npmrc";
 
   programs.codexDesktopLinux.enable = true;
+
+  programs.direnv = {
+    enable = true;
+    nix-direnv.enable = true;
+  };
 
   # Nixpkgs ships the GUI as `obsidian` and the native CLI as
   # `obsidian-cli`. The GUI cannot register the CLI itself because its NixOS
