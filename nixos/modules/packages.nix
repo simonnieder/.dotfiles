@@ -138,6 +138,7 @@ in
     grim
     slurp
     satty
+    wtype
     hypridle
     hyprlock
     wlsunset

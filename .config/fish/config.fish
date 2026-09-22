@@ -70,3 +70,11 @@ set -gx FZF_DEFAULT_OPTS "--color=bg:#141415,bg+:#252530,fg:#cdcdcd,fg+:#d7d7d7,
 fzf --fish | source
 set -gx PATH /home/simonnieder/.local/bin $PATH
 set -gx PI_TMUX_IMAGES 1
+
+# Make the existing OpenCode Go credential available to clients such as Codex.
+if command -q jq; and test -r ~/.local/share/opencode/auth.json
+    set -l opencode_go_api_key (jq -er '."opencode-go".key // empty' ~/.local/share/opencode/auth.json 2>/dev/null)
+    if test $status -eq 0
+        set -gx OPENCODE_GO_API_KEY $opencode_go_api_key
+    end
+end

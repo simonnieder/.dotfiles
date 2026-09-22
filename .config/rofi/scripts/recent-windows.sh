@@ -82,12 +82,34 @@ for window_row in "${window_rows[@]}"; do
 
   desktop_entry_for_app "$app"
 
+  # App-mode Chromium windows inherit the current page title, which is useful
+  # in a browser but noisy in the recent-window switcher. Give dedicated web
+  # apps stable labels instead.
+  case "$app" in
+    chrome-chatgpt.com__-Default)
+      desktop_entry_name='ChatGPT'
+      title=''
+      ;;
+    chrome-*__dashboard-Default)
+      desktop_entry_name='Solidtime'
+      title=''
+      ;;
+    helium|Helium)
+      if [[ "$title" =~ [Ss]olidtime ]]; then
+        desktop_entry_name='Solidtime'
+        title=''
+      fi
+      ;;
+  esac
+
   if (( ${#title} > 96 )); then
     title="${title:0:93}..."
   fi
 
+  window_label="$desktop_entry_name"
+  [[ -n "$title" ]] && window_label+=" — $title"
   printf '%s\0icon\x1f%s\x1finfo\x1f%s\n' \
-    "$desktop_entry_name — $title (ws $ws)" "$desktop_entry_icon" "$id"
+    "$window_label (ws $ws)" "$desktop_entry_icon" "$id"
   ((window_count += 1))
 done
 

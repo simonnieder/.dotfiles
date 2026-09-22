@@ -102,9 +102,18 @@ window#waybar {
 }
 
 tooltip {
-  padding: 2px;
-  background: @surface_container;
-  border: 1px solid @outline_variant;
+  padding: 8px 12px;
+  background-color: @surface;
+  border: 2px solid @outline_variant;
+  border-radius: 12px;
+}
+
+tooltip decoration {
+  border-radius: 12px;
+}
+
+tooltip label {
+  color: @on_surface;
 }
 
 menu {

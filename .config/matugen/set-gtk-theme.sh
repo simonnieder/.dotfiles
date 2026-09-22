@@ -7,5 +7,4 @@ case "$mode" in
   *) exit 2 ;;
 esac
 
-dconf write /org/gnome/desktop/interface/gtk-theme "''"
-dconf write /org/gnome/desktop/interface/gtk-theme "'adw-gtk3-$mode'"
+gsettings set org.gnome.desktop.interface gtk-theme "adw-gtk3-$mode"

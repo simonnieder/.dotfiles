@@ -2,17 +2,38 @@
 set -u -o pipefail
 
 tracker="$HOME/.config/scripts/solidtime-tracker.sh"
+display_power="$HOME/.config/scripts/display-power.sh"
+lock_display_timeout=10 # Keep in sync with the locked-screen listener in niri/hypridle.conf.
 hyprlock_pid=""
 hyprlock_log=""
+display_off_pid=""
+display_power_managed=0
 timer_pause_requested=0
 
 finish() {
+  if [[ -n "$display_off_pid" ]]; then
+    kill "$display_off_pid" 2>/dev/null || true
+    wait "$display_off_pid" 2>/dev/null || true
+  fi
+  if (( display_power_managed )); then
+    "$display_power" on || true
+  fi
   [[ -n "$hyprlock_log" ]] && rm -f -- "$hyprlock_log"
   if (( timer_pause_requested )); then
     "$tracker" restart-after-break || true
   fi
 }
 trap finish EXIT
+
+power_off_after_lock() {
+  display_power_managed=1
+  (
+    sleep "$lock_display_timeout"
+    pgrep -x hyprlock >/dev/null || exit 0
+    "$display_power" off
+  ) &
+  display_off_pid=$!
+}
 
 start_lock_and_wait() {
   local attempt
@@ -64,6 +85,7 @@ lock_session() {
     wait_for_unlock
     return 1
   fi
+  power_off_after_lock
   pause_timer
   wait_for_unlock
 }

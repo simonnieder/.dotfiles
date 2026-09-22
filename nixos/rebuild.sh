@@ -3,7 +3,8 @@ set -euo pipefail
 
 HOST="${1:-$(hostname)}"
 
-# Use the repository as a path flake so new files are visible without silently
-# staging every change under nixos/.
+# Use the Git-backed local flake so runtime files such as Unix sockets are not
+# treated as Nix source files. Home Manager still reads the live dotfiles path
+# for its out-of-store links, so local configuration edits remain visible.
 exec sudo nixos-rebuild switch --impure \
-  --flake "path:$HOME/.dotfiles?dir=nixos#$HOST"
+  --flake "git+file://$HOME/.dotfiles?dir=nixos#$HOST"

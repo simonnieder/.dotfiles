@@ -25,6 +25,11 @@ fi
 # Broadcast the system preference first so browsers and system-aware apps
 # react as soon as the command-center entry is selected.
 dconf write /org/gnome/desktop/interface/color-scheme "'prefer-$mode'"
+dconf write /org/gnome/desktop/interface/gtk-theme "'adw-gtk3-$mode'"
 matugen --mode "$mode" color hex '#a7c8ff'
+
+# Refresh the portal settings provider used by Chromium/Electron and other
+# desktop-aware applications. Existing windows may still need reopening.
+systemctl --user try-restart xdg-desktop-portal-gtk.service 2>/dev/null || true
 
 notify-send "Color scheme" "${mode^} mode" 2>/dev/null || true

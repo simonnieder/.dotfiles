@@ -19,7 +19,7 @@ find_window() {
 window_id=$(find_window)
 
 if [ -z "$window_id" ]; then
-    helium --app=https://chatgpt.com --class=ChatGPT >/dev/null 2>&1 &
+    helium --app=https://chatgpt.com --class=ChatGPT --name=ChatGPT >/dev/null 2>&1 &
 fi
 
 # Chromium may reuse its existing process, so wait for the Wayland window

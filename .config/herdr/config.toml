@@ -1,16 +1,8 @@
 onboarding = false
-# Match the active Ghostty palette (~/.config/ghostty/config.ghostty).
-[theme]
-name = "catppuccin"
 
-auto_switch = false
-[theme.custom]
-panel_bg = "#141415"
-accent = "#6e94b2"
-red = "#d8647e"
-green = "#7fa563"
-yellow = "#f3be7c"
-blue = "#6e94b2"
+# Use the active host terminal palette (Ghostty) without a separate Herdr theme.
+[theme]
+name = "terminal"
 
 [keys]
 # Match tmux's prefix. The default Herdr pane/tab bindings already largely

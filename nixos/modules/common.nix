@@ -99,8 +99,8 @@ in
   boot.loader.systemd-boot.configurationLimit = 5;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  # Use latest kernel.
-  boot.kernelPackages = pkgs.linuxPackages_latest;
+  # Use the requested unpatched Linux 7.1.13 kernel line.
+  boot.kernelPackages = pkgs.linuxPackages_7_1;
 
   # Enable networking.
   networking.networkmanager.enable = true;

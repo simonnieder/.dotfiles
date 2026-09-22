@@ -175,7 +175,7 @@ binds {
     Mod+N      hotkey-overlay-title="Focus Obsidian"           { spawn-sh "$HOME/.config/scripts/focus-app.sh obsidian obsidian"; }
     Mod+G      hotkey-overlay-title="Open ChatGPT"           { spawn-sh "$HOME/.config/niri/open-chatgpt.sh"; }
     Mod+Return      hotkey-overlay-title="Focus Terminal"           { spawn-sh "$HOME/.config/scripts/focus-app.sh ghostty ghostty"; }
-    Mod+E      hotkey-overlay-title="Open File Manager: nautilus" { spawn "nautilus"; }
+    Mod+E      hotkey-overlay-title="Open File Manager: nautilus" { spawn-sh "$HOME/.config/niri/open-nautilus.sh"; }
     Mod+Ctrl+Shift+L hotkey-overlay-title="Lock the Screen: hyprlock"  { spawn-sh "$HOME/.config/scripts/session-power.sh lock"; }
     Mod+Ctrl+Shift+H hotkey-overlay-title="Hibernate"                   { spawn-sh "$HOME/.config/scripts/session-power.sh hibernate"; }
 	Mod+X { spawn "voxtype" "record" "toggle"; }
@@ -196,6 +196,7 @@ binds {
 
     // --- Screenshot ---
 	Mod+Shift+S { spawn-sh "grim -g \"$(slurp -w 0 2>/dev/null)\" -t ppm - | satty --filename - --fullscreen --initial-tool crop --output-filename \"$HOME/images/screenshot-$(date +'%Y-%m-%d_%H-%M-%S').png\" --early-exit --actions-on-enter save-to-clipboard --copy-command 'wl-copy'"; }
+    Mod+Shift+G { spawn-sh "$HOME/.config/niri/screenshot-to-chatgpt.sh"; }
     Print { spawn-sh "grim -t ppm - | satty --filename - --initial-tool pointer --output-filename \"$HOME/images/screenshot-$(date +'%Y-%m-%d_%H-%M-%S').png\" --early-exit --actions-on-enter save-to-clipboard --copy-command 'wl-copy'"; }
     Sys_Req { spawn-sh "grim -t ppm - | satty --filename - --initial-tool pointer --output-filename \"$HOME/images/screenshot-$(date +'%Y-%m-%d_%H-%M-%S').png\" --early-exit --actions-on-enter save-to-clipboard --copy-command 'wl-copy'"; }
 
@@ -375,6 +376,22 @@ window-rule {
     open-on-workspace "2"
 }
 
+// Solidtime runs in Helium app mode, so its Wayland app-id is Helium while
+// its title identifies the dedicated app window.
+window-rule {
+    match app-id=r#"^helium$"# title=r#"^.*solidtime.*$"#
+    open-on-workspace "2"
+    open-maximized true
+}
+
+// Chromium gives app-mode windows a URL-derived app-id when Helium reuses its
+// browser process. Keep Solidtime on the same workspace in that case too.
+window-rule {
+    match app-id=r#"^chrome-.*__dashboard-Default$"#
+    open-on-workspace "2"
+    open-maximized true
+}
+
 // Workspace 3: Spotify, Thunderbird, Telegram, then WhatsApp.
 window-rule {
     match app-id=r#"^(spotify|Spotify)$"#
@@ -410,9 +427,8 @@ window-rule {
 // --- Float certain apps ---
 window-rule {
     match app-id=r#"^org\.gnome\.Nautilus$"#
-    open-floating true
-    default-column-width { proportion 0.8; }
-    default-window-height { proportion 0.8; }
+    open-floating false
+    default-column-width { proportion 0.5; }
 }
 
 // Float system utilities

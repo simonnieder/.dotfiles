@@ -7,6 +7,7 @@ set -u -o pipefail
 config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/solidtime"
 token_file="${SOLIDTIME_TOKEN_FILE:-$config_dir/waybar-api-token}"
 url_file="${SOLIDTIME_URL_FILE:-$config_dir/waybar-api-url}"
+web_url_file="${SOLIDTIME_WEB_URL_FILE:-$config_dir/web-url}"
 host_file="${SOLIDTIME_HOST_FILE:-$config_dir/waybar-api-host}"
 organization_file="${SOLIDTIME_ORGANIZATION_FILE:-$config_dir/waybar-api-organization}"
 member_file="${SOLIDTIME_MEMBER_FILE:-$config_dir/waybar-api-member}"
@@ -17,13 +18,13 @@ rofi_theme="${ROFI_THEME:-$HOME/.config/rofi/launcher.rasi}"
 waybar_signal=8 # Keep in sync with custom/time-tracker.signal in Waybar.
 
 base_url=""
+web_url=""
 token=""
 organization_id=""
 member_id=""
 projects_file=""
 tasks_file=""
 active_response_file=""
-active_id=""
 active_start=""
 active_type="work"
 active_project_id=""
@@ -32,15 +33,12 @@ active_organization_id=""
 active_description=""
 active_project_name=""
 active_task_name=""
-active_billable="false"
 active_found=0
 active_offline=0
 active_http_code=""
 active_available=0
 selected_project_id=""
-selected_project_name=""
 selected_task_id=""
-selected_task_name=""
 temp_files=()
 
 umask 077
@@ -76,6 +74,24 @@ load_base_url() {
 
   base_url="${base_url%/}"
   [[ -n "$base_url" ]]
+}
+
+load_web_url() {
+  if [[ -n "${SOLIDTIME_WEB_URL:-}" ]]; then
+    web_url="$SOLIDTIME_WEB_URL"
+  elif [[ -r "$web_url_file" ]]; then
+    web_url="$(<"$web_url_file")"
+  elif [[ "$base_url" =~ ^https?://([^/]+):8090$ ]]; then
+    # The self-hosted instance exposes its API and web UI on adjacent ports.
+    # Keep the web URL outside this public repo when a custom URL is needed.
+    web_url="https://${BASH_REMATCH[1]}:8092"
+  else
+    return 1
+  fi
+
+  web_url="${web_url%/}"
+  [[ "$web_url" == */dashboard ]] || web_url+="/dashboard"
+  [[ -n "$web_url" ]]
 }
 
 load_token() {
@@ -255,14 +271,12 @@ load_tasks_cache() {
 load_entry_details() {
   local response="$1"
 
-  active_id="$(jq -r '.data.id // empty' "$response" 2>/dev/null || true)"
   active_start="$(jq -r '.data.start // empty' "$response" 2>/dev/null || true)"
   active_type="$(jq -r '.data.type // "work"' "$response" 2>/dev/null || printf 'work')"
   active_project_id="$(jq -r '.data.project_id // empty' "$response" 2>/dev/null || true)"
   active_task_id="$(jq -r '.data.task_id // empty' "$response" 2>/dev/null || true)"
   active_organization_id="$(jq -r '.data.organization_id // empty' "$response" 2>/dev/null || true)"
   active_description="$(jq -r '.data.description // empty' "$response" 2>/dev/null || true)"
-  active_billable="$(jq -r '.data.billable // false' "$response" 2>/dev/null || printf 'false')"
   active_project_name=""
   active_task_name=""
 
@@ -345,7 +359,6 @@ fetch_projects() {
 prompt_task() {
   local choice task_count
   selected_task_id=""
-  selected_task_name=""
   [[ -n "$selected_project_id" ]] || return 0
   load_tasks_cache "$organization_id" || return 0
 
@@ -361,7 +374,6 @@ prompt_task() {
     return 0
   fi
 
-  selected_task_name="$choice"
   selected_task_id="$(jq -r --arg project "$selected_project_id" --arg name "$choice" '[.data[]? | select(.project_id == $project and .name == $name) | .id][0] // empty' "$tasks_file" 2>/dev/null || true)"
   [[ -n "$selected_task_id" ]]
 }
@@ -369,9 +381,7 @@ prompt_task() {
 prompt_project() {
   local choice no_project_label='󰉋  No project'
   selected_project_id=""
-  selected_project_name=""
   selected_task_id=""
-  selected_task_name=""
 
   fetch_projects "$organization_id" || {
     show_error 'Solidtime projects are unavailable'
@@ -385,7 +395,6 @@ prompt_project() {
   [[ -n "$choice" ]] || return 1
 
   if [[ "$choice" != "$no_project_label" ]]; then
-    selected_project_name="$choice"
     selected_project_id="$(jq -r --arg name "$choice" '[.data[]? | select(.name == $name and (.is_archived // false) != true and (.archived_at // null) == null) | .id][0] // empty' "$projects_file" 2>/dev/null || true)"
     [[ -n "$selected_project_id" ]] || {
       show_error 'The selected Solidtime project is no longer available'
@@ -535,11 +544,14 @@ refresh_waybar() {
 }
 
 open_solidtime() {
-  local window_id
+  local window_id helium_command
+
+  load_base_url || true
+  load_web_url || return 0
 
   if command -v niri >/dev/null 2>&1; then
     window_id="$(niri msg -j windows 2>/dev/null | jq -r '
-      [ .[] | select(.app_id == "solidtime") ]
+      [ .[] | select(.app_id == "solidtime" or ((.title // "") | test("solidtime"; "i"))) ]
       | if length == 0 then empty else sort_by(.focus_timestamp.secs, .focus_timestamp.nanos) | last.id end
     ' 2>/dev/null || true)"
     if [[ -n "$window_id" ]]; then
@@ -548,13 +560,14 @@ open_solidtime() {
     fi
   fi
 
-  command -v solidtime >/dev/null 2>&1 || return 0
-  solidtime >/dev/null 2>&1 &
+  command -v helium >/dev/null 2>&1 || command -v helium-browser >/dev/null 2>&1 || return 0
+  helium_command="$(command -v helium || command -v helium-browser)"
+  "$helium_command" --app="$web_url" --class=solidtime --name=solidtime >/dev/null 2>&1 &
 
   command -v niri >/dev/null 2>&1 || return 0
   for _ in {1..10}; do
     window_id="$(niri msg -j windows 2>/dev/null | jq -r '
-      [ .[] | select(.app_id == "solidtime") ]
+      [ .[] | select(.app_id == "solidtime" or ((.title // "") | test("solidtime"; "i"))) ]
       | if length == 0 then empty else sort_by(.focus_timestamp.secs, .focus_timestamp.nanos) | last.id end
     ' 2>/dev/null || true)"
     if [[ -n "$window_id" ]]; then
@@ -670,7 +683,11 @@ show_menu() {
         (( active_offline )) || stop_active_from_file "$active_response_file" || true
         ;;
       "$switch_label")
-        (( active_offline )) && show_error 'Solidtime is offline; the active timer was not changed' || start_from_prompt
+        if (( active_offline )); then
+          show_error 'Solidtime is offline; the active timer was not changed'
+        else
+          start_from_prompt
+        fi
         ;;
       "$open_label")
         open_solidtime
@@ -719,15 +736,6 @@ case "$command_name" in
     ;;
   resume-after-lock|restart-after-break)
     restart_after_break
-    ;;
-  # Compatibility for processes that loaded the old command path before this
-  # split. Power and lock behavior lives in session-power.sh.
-  lock)
-    exec "$HOME/.config/scripts/session-power.sh" lock
-    ;;
-  systemctl-break)
-    shift
-    exec "$HOME/.config/scripts/session-power.sh" "$@"
     ;;
   menu|*)
     show_menu
