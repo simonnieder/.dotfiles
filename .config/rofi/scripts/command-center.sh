@@ -3,29 +3,27 @@ set -euo pipefail
 
 rofi_theme="$HOME/.config/rofi/launcher.rasi"
 
-# Return the original row number rather than the rendered label. This avoids
-# dispatch failures caused by icon/font text differing from the source string.
-choice="$(cat <<'EOF' | rofi -dmenu -i -format i -p "command" -theme "$rofi_theme"
-󰀻  Applications
-󰖲  Recent Windows
-󰅌  Clipboard
-󰞅  Emoji
-󱎫  Time Tracker
-󰔎  Toggle light/dark mode
-󰖔  Toggle night mode
-󰍹  Toggle laptop screen
-  Power
-󰑓  Reload niri
-󰑓  Restart waybar
-  Edit dotfiles
-  Edit NixOS config
-󰒲  Rebuild NixOS
-󰠮  Open wiki
-󰲋  Open repos
-EOF
-)"
+groups=(Apps Tools Appearance System Folders)
+group_icons=(󰀻 󰜉 󰔎 󰒓 󰉋)
+action_groups=(
+  Apps Apps
+  Tools Tools Tools
+  Appearance Appearance Appearance
+  System System System System
+  Folders Folders Folders Folders
+)
+action_icons=(󰀻 󰖲 󰅌 󰞅 󱎫 󰔎 󰖔 󰍹  󰑓 󰑓 󰒲   󰠮 󰲋)
+action_ids=(0 1 2 3 4 5 6 7 8 9 10 13 11 12 14 15)
+action_names=(
+  'Applications' 'Recent windows'
+  'Clipboard' 'Emoji' 'Time tracker'
+  'Toggle light/dark mode' 'Toggle night mode' 'Toggle laptop screen'
+  'Power' 'Reload niri' 'Restart waybar' 'Rebuild NixOS'
+  'Edit dotfiles' 'Edit NixOS config' 'Open wiki' 'Open repos'
+)
 
-case "$choice" in
+run_action() {
+case "$1" in
   0)
     exec rofi -show drun -theme "$rofi_theme"
     ;;
@@ -85,3 +83,40 @@ case "$choice" in
     exec zeditor "$HOME/repos"
     ;;
 esac
+}
+
+group=''
+while :; do
+  rows=()
+  row_types=()
+  row_values=()
+
+  if [[ -z "$group" ]]; then
+    for i in "${!groups[@]}"; do
+      rows+=("${group_icons[i]}  ${groups[i]} ›")
+      row_types+=(group)
+      row_values+=("${groups[i]}")
+    done
+  else
+    rows+=("‹  All commands")
+    row_types+=(back)
+    row_values+=("")
+  fi
+
+  for i in "${!action_names[@]}"; do
+    if [[ -z "$group" || "${action_groups[i]}" == "$group" ]]; then
+      rows+=("${action_icons[i]}  ${action_groups[i]} > ${action_names[i]}")
+      row_types+=(action)
+      row_values+=("${action_ids[i]}")
+    fi
+  done
+
+  choice="$(printf '%s\n' "${rows[@]}" | rofi -dmenu -i -matching fuzzy -format i -p "${group:-command}" -theme "$rofi_theme")" || exit 0
+  [[ "$choice" =~ ^[0-9]+$ ]] || exit 0
+
+  case "${row_types[choice]}" in
+    group) group="${row_values[choice]}" ;;
+    back) group='' ;;
+    action) run_action "${row_values[choice]}"; exit 0 ;;
+  esac
+done

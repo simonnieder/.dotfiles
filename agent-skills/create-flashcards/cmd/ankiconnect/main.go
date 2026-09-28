@@ -90,6 +90,8 @@ func run() int {
 		return cmdDecks(os.Args[2:])
 	case "create-deck":
 		return cmdCreateDeck(os.Args[2:])
+	case "change-deck":
+		return cmdChangeDeck(os.Args[2:])
 	case "models":
 		return cmdModels(os.Args[2:])
 	case "stats":
@@ -128,6 +130,7 @@ Usage:
   ankiconnect [global flags] version
   ankiconnect [global flags] decks
   ankiconnect [global flags] create-deck -name "LBAI"
+  ankiconnect [global flags] change-deck -cards 123,456 -deck "ML EXAM::Part 1"
   ankiconnect [global flags] models
   ankiconnect [global flags] stats -deck "ML EXAM"
   ankiconnect [global flags] can-add -file cards.json
@@ -375,6 +378,29 @@ func cmdSearch(args []string) int {
 		}
 	}
 	printJSON(infos)
+	return 0
+}
+
+func cmdChangeDeck(args []string) int {
+	fs := flag.NewFlagSet("change-deck", flag.ContinueOnError)
+	addGlobalFlags(fs)
+	cardsText := fs.String("cards", "", "comma-separated card IDs")
+	deck := fs.String("deck", "", "destination deck")
+	dryRun := fs.Bool("dry-run", false, "print planned move without changing cards")
+	fs.SetOutput(io.Discard)
+	if err := fs.Parse(args); err != nil { fmt.Fprintln(os.Stderr, err); return 2 }
+	if *cardsText == "" || strings.TrimSpace(*deck) == "" { fmt.Fprintln(os.Stderr, "-cards and -deck are required"); return 2 }
+	var ids []int64
+	for _, part := range strings.Split(*cardsText, ",") {
+		var id int64
+		if _, err := fmt.Sscan(strings.TrimSpace(part), &id); err != nil { fmt.Fprintf(os.Stderr, "invalid card id %q: %v\n", part, err); return 2 }
+		ids = append(ids, id)
+	}
+	if *dryRun { printJSON(map[string]interface{}{"cards": ids, "deck": *deck, "dryRun": true}); return 0 }
+	client, err := newClient(fs)
+	if err != nil { fmt.Fprintln(os.Stderr, err); return 2 }
+	if err := client.call("changeDeck", map[string]interface{}{"cards": ids, "deck": *deck}, nil); err != nil { fmt.Fprintln(os.Stderr, err); return 1 }
+	printJSON(map[string]interface{}{"cardsMoved": len(ids), "deck": *deck})
 	return 0
 }
 

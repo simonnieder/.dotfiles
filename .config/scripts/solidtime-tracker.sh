@@ -22,8 +22,10 @@ web_url=""
 token=""
 organization_id=""
 member_id=""
+user_id=""
 projects_file=""
 tasks_file=""
+today_cache=""
 active_response_file=""
 active_start=""
 active_type="work"
@@ -129,6 +131,9 @@ one_line() {
 
 print_idle() {
   local tooltip="${1:-No active task}"
+  local today
+  today="$(today_summary)"
+  [[ -n "$today" ]] && tooltip+=$'\n\n'"$today"
   jq -nc \
     --arg text '󰛊 idle' \
     --arg class 'idle' \
@@ -337,6 +342,21 @@ resolve_membership() {
   [[ -n "$organization_id" && -n "$member_id" ]]
 }
 
+resolve_user_id() {
+  local cache_file="$cache_dir/user.json" response code
+  ensure_cache_dir
+  if [[ ! -s "$cache_file" ]]; then
+    response="$(mktemp "${TMPDIR:-/tmp}/solidtime-tracker.XXXXXX")" || return 1
+    code="$(api_request GET "$base_url/api/v1/users/me" "$response" || true)"
+    if [[ "$code" =~ ^2 ]] && jq -e '.data.id | type == "string"' "$response" >/dev/null 2>&1; then
+      cp "$response" "$cache_file" 2>/dev/null || true
+    fi
+    rm -f -- "$response"
+  fi
+  user_id="$(jq -r '.data.id // empty' "$cache_file" 2>/dev/null || true)"
+  [[ -n "$user_id" ]]
+}
+
 fetch_projects() {
   local organization="$1" cache_file response code
   cache_file="$cache_dir/projects-$organization.json"
@@ -354,6 +374,91 @@ fetch_projects() {
   fi
 
   return 1
+}
+
+today_summary() {
+  local response page code count offset=0 today_start now_epoch oldest_start
+  local cache_age projects_cache summary complete=0
+
+  [[ -n "$base_url" && -n "$token" ]] || return 0
+  resolve_membership && resolve_user_id || return 0
+  ensure_cache_dir
+
+  today_start="$(date -d 'today 00:00' +%s)"
+  now_epoch="$(date +%s)"
+  today_cache="$cache_dir/today-$(date +%F)-$(cache_key "$organization_id/$user_id").json"
+  cache_age=$((now_epoch - $(stat -c %Y "$today_cache" 2>/dev/null || printf 0)))
+
+  if [[ ! -s "$today_cache" || "$cache_age" -ge 60 ]]; then
+    response="$(mktemp "${TMPDIR:-/tmp}/solidtime-tracker.XXXXXX")" || return 0
+    printf '{"data":[]}' >"$response"
+    while :; do
+      page="$(mktemp "${TMPDIR:-/tmp}/solidtime-tracker.XXXXXX")" || break
+      code="$(api_request GET "$base_url/api/v1/organizations/$organization_id/time-entries?user_id=$user_id&limit=500&offset=$offset" "$page" || true)"
+      if [[ ! "$code" =~ ^2 ]] || ! jq -e '.data | type == "array"' "$page" >/dev/null 2>&1; then
+        rm -f -- "$page"
+        break
+      fi
+      count="$(jq '.data | length' "$page")"
+      if ! jq -s '{data: (.[0].data + .[1].data)}' "$response" "$page" >"$response.next"; then
+        rm -f -- "$page"
+        break
+      fi
+      mv "$response.next" "$response"
+      if (( count < 500 )); then
+        complete=1
+        rm -f -- "$page"
+        break
+      fi
+      oldest_start="$(jq -r '.data[-1].start // empty' "$page")"
+      rm -f -- "$page"
+      if [[ -n "$oldest_start" ]] && (( $(date -d "$oldest_start" +%s 2>/dev/null || printf 0) < today_start )); then
+        complete=1
+        break
+      fi
+      [[ -n "$oldest_start" ]] || break
+      offset=$((offset + count))
+    done
+    if (( complete )); then
+      cp "$response" "$today_cache" 2>/dev/null || true
+    fi
+    rm -f -- "$response" "$response.next"
+  fi
+
+  [[ -s "$today_cache" ]] || { printf 'Today\nTotals unavailable'; return 0; }
+  projects_cache="$cache_dir/projects-$organization_id.json"
+  if [[ ! -s "$projects_cache" ]] || (( now_epoch - $(stat -c %Y "$projects_cache" 2>/dev/null || printf 0) >= 3600 )); then
+    fetch_projects "$organization_id" || true
+  fi
+  [[ -s "$projects_cache" ]] || { printf 'Today\nProject names unavailable'; return 0; }
+
+  summary="$(jq -r --arg user "$user_id" --argjson start "$today_start" --argjson now "$now_epoch" --slurpfile projects "$projects_cache" '
+    def duration:
+      (./60 | floor) as $minutes
+      | if . > 0 and $minutes == 0 then "<1m"
+        elif $minutes >= 60 then
+          "\(($minutes / 60) | floor)h\(if $minutes % 60 < 10 then "0" else "" end)\($minutes % 60)m"
+        else "\($minutes)m" end;
+    ($projects[0].data | map({key: .id, value: .name}) | from_entries) as $names
+    | [.data[]
+       | select(.user_id == $user)
+       | select((.type // "work") != "break")
+       | . as $entry
+       | ($entry.start | fromdateiso8601) as $entry_start
+       | (if $entry.end == null then $now else ($entry.end | fromdateiso8601) end) as $entry_end
+       | ([0, ([$entry_end, $now] | min) - ([$entry_start, $start] | max)] | max) as $seconds
+       | select($seconds > 0)
+       | {id: ($entry.project_id // ""), seconds: $seconds}]
+    | group_by(.id)
+    | map({id: .[0].id, seconds: (map(.seconds) | add)})
+    | sort_by(-.seconds)
+    | if length == 0 then "Today\nNo tracked time"
+      else
+        "Today\n" + (map("\(if .id == "" then "No project" else ($names[.id] // "Unknown project") end): \(.seconds | duration)") | join("\n"))
+        + "\nTotal: \((map(.seconds) | add) | duration)"
+      end
+  ' "$today_cache" 2>/dev/null || true)"
+  printf '%s' "${summary:-Today$'\n'Totals unavailable}"
 }
 
 prompt_task() {
@@ -431,6 +536,7 @@ start_timer() {
   code="$(api_request POST "$base_url/api/v1/organizations/$organization_id/time-entries" "$response" "$payload" || true)"
   if [[ "$code" =~ ^2 ]]; then
     rm -f -- "$cache_dir/active.json"
+    rm -f -- "$cache_dir"/today-*.json
     refresh_waybar
     flush_dns_cache
     return 0
@@ -452,6 +558,7 @@ stop_active_from_file() {
   code="$(api_request PUT "$base_url/api/v1/organizations/$organization/time-entries/$entry_id" "$response" "$payload" || true)"
   if [[ "$code" =~ ^2 ]]; then
     rm -f -- "$cache_dir/active.json"
+    rm -f -- "$cache_dir"/today-*.json
     refresh_waybar
     flush_dns_cache
     return 0
@@ -579,7 +686,7 @@ open_solidtime() {
 }
 
 print_status() {
-  local response start_epoch now_epoch elapsed formatted started_at tooltip label text class
+  local response start_epoch now_epoch elapsed formatted started_at tooltip label text class today
 
   if ! load_base_url; then
     print_idle 'Solidtime URL is not configured'
@@ -642,6 +749,8 @@ print_status() {
     tooltip+=$'\n'"$label"
   fi
   (( active_offline )) && tooltip+=" · last known"
+  today="$(today_summary)"
+  [[ -n "$today" ]] && tooltip+=$'\n\n'"$today"
 
   jq -nc \
     --arg text "$text" \

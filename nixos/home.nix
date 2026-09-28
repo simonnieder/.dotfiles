@@ -29,6 +29,8 @@ in
   xdg.mimeApps = {
     enable = true;
     defaultApplications = {
+      "text/html" = [ "helium.desktop" ];
+      "application/xhtml+xml" = [ "helium.desktop" ];
       "text/markdown" = [ "obsidian.desktop" ];
       "text/x-markdown" = [ "obsidian.desktop" ];
     };
