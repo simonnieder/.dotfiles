@@ -1,6 +1,6 @@
 ---
 name: improve-codebase-architecture
-description: Improve a codebase's architecture through targeted, incremental refactors grounded in the existing system. Use when asked to simplify structure, reduce coupling, clarify boundaries, untangle modules, or make the codebase easier to extend without a speculative rewrite.
+description: Use when simplifying structure, reducing coupling, clarifying boundaries, untangling modules, or making a codebase easier to extend without a speculative rewrite. Improves architecture through targeted, incremental refactors grounded in the existing system.
 ---
 
 # Improve Codebase Architecture
