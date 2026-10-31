@@ -16,7 +16,8 @@ rofi_theme="$HOME/.config/rofi/launcher.rasi"
 
 confirm() {
   printf '%s\n%s\n' "$yes" "$no" |
-    rofi -dmenu -i -p 'Confirm' -mesg "Run: $1?" -theme "$rofi_theme"
+    rofi -dmenu -sync -i -p 'Confirm' -mesg "Run: $1?" -theme "$rofi_theme" \
+      -theme-str 'listview { lines: 2; fixed-height: true; dynamic: false; }'
 }
 
 run_confirmed() {
@@ -29,7 +30,8 @@ run_confirmed() {
 
 chosen="$(printf '%s\n%s\n%s\n%s\n%s\n%s\n' \
   "$lock" "$suspend" "$hibernate" "$logout" "$reboot" "$shutdown" |
-  rofi -dmenu -i -p 'Power' -mesg "Uptime: $uptime_text" -theme "$rofi_theme")"
+  rofi -dmenu -sync -i -p 'Power' -mesg "Uptime: $uptime_text" -theme "$rofi_theme" \
+    -theme-str 'listview { lines: 6; fixed-height: true; dynamic: false; }')"
 
 case "$chosen" in
   "$lock")

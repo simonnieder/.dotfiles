@@ -766,20 +766,9 @@ print_status() {
     '{text:$text, class:$class, tooltip:$tooltip}'
 }
 
-# Close only this menu's loading window. If it was dismissed, do not reopen it
-# when a slow request eventually returns.
-finish_menu_loading() {
-  local pid="$1"
-  if ! kill -0 "$pid" 2>/dev/null; then
-    wait "$pid" 2>/dev/null || true
-    return 1
-  fi
-  kill "$pid" 2>/dev/null || true
-  wait "$pid" 2>/dev/null || true
-}
-
 show_menu() {
-  local status_line choice elapsed start_epoch now_epoch loading_file loading_pid
+  local choice menu_pipe choice_file menu_pid menu_fd
+  local menu_layout='listview { lines: 3; fixed-height: true; dynamic: false; }'
   local stop_label='󰐥  Stop timer'
   local start_label='󰜉  Start timer'
   local switch_label='󰜉  Switch project'
@@ -789,58 +778,46 @@ show_menu() {
     show_error 'Solidtime URL or token is not configured'
     return 0
   fi
-  loading_file="$(mktemp "${TMPDIR:-/tmp}/solidtime-menu.XXXXXX")" || return 1
-  temp_files+=("$loading_file")
-  printf '%s\0nonselectable\x1ftrue\n' \
-    '━━━━━━━━━━━━  ━━━━' '━━━━━━━━━' '━━━━━━━━━━━━━━' >"$loading_file"
-  rofi -dmenu -input "$loading_file" -p 'Time tracker' \
-    -mesg 'Loading timer…' -theme "$rofi_theme" \
-    -theme-str 'listview { lines: 3; fixed-height: true; } element-text { text-color: @outline-variant; }' &
-  loading_pid=$!
+  menu_pipe="$(mktemp "${TMPDIR:-/tmp}/solidtime-menu.XXXXXX")" || return 1
+  temp_files+=("$menu_pipe")
+  choice_file="$(mktemp "${TMPDIR:-/tmp}/solidtime-choice.XXXXXX")" || return 1
+  temp_files+=("$choice_file")
+  rm -f -- "$menu_pipe"
+  mkfifo -m 600 "$menu_pipe" || return 1
+
+  # Keep one window open. Rofi's asynchronous input shows its loading overlay
+  # until the API response fills the list and this pipe reaches EOF.
+  # The parent's read/write descriptor also makes Escape safe during a write.
+  exec {menu_fd}<>"$menu_pipe"
+  rofi -dmenu -i -p 'Time tracker' -theme "$rofi_theme" \
+    -theme-str "$menu_layout" <"$menu_pipe" >"$choice_file" {menu_fd}>&- &
+  menu_pid=$!
 
   if ! load_active_for_action; then
-    if finish_menu_loading "$loading_pid"; then
-      show_error 'Solidtime is unavailable'
-    fi
-    return 0
-  fi
-  finish_menu_loading "$loading_pid" || return 0
-
-  if (( active_found )); then
-    start_epoch="$(date -d "$active_start" +%s 2>/dev/null || printf '0')"
-    now_epoch="$(date +%s)"
-    elapsed=$((now_epoch - start_epoch))
-    (( elapsed < 0 )) && elapsed=0
-    status_line="${active_project_name:-No project} · $(format_duration "$elapsed")"
-    [[ -n "$active_task_name" ]] && status_line+=" · ${active_task_name}"
-    [[ "${active_type,,}" == break ]] && status_line="Break · $(format_duration "$elapsed")"
-    (( active_offline )) && status_line+=' · last known'
-
-    choice="$({ printf '%s\n' "$stop_label" "$switch_label" "$open_label"; } |
-      rofi -dmenu -i -p 'Time tracker' -mesg "$status_line" -theme "$rofi_theme" || true)"
-    case "$choice" in
-      "$stop_label")
-        (( active_offline )) || stop_active_from_file "$active_response_file" || true
-        ;;
-      "$switch_label")
-        if (( active_offline )); then
-          show_error 'Solidtime is offline; the active timer was not changed'
-        else
-          start_from_prompt
-        fi
-        ;;
-      "$open_label")
-        open_solidtime
-        ;;
-    esac
+    printf '%s\0nonselectable\x1ftrue\n' 'Solidtime is unavailable' >&"$menu_fd"
+    printf '%s\n' "$open_label" >&"$menu_fd"
+  elif (( active_found )); then
+    printf '%s\n' "$stop_label" "$switch_label" "$open_label" >&"$menu_fd"
   else
-    choice="$({ printf '%s\n' "$start_label" "$open_label"; } |
-      rofi -dmenu -i -p 'Time tracker' -mesg 'No active Solidtime timer' -theme "$rofi_theme" || true)"
-    case "$choice" in
-      "$start_label") start_from_prompt ;;
-      "$open_label") open_solidtime ;;
-    esac
+    printf '%s\n' "$start_label" "$open_label" >&"$menu_fd"
   fi
+  exec {menu_fd}>&-
+  wait "$menu_pid" 2>/dev/null || return 0
+  choice="$(<"$choice_file")"
+  case "$choice" in
+    "$stop_label")
+      (( active_offline )) || stop_active_from_file "$active_response_file" || true
+      ;;
+    "$switch_label")
+      if (( active_offline )); then
+        show_error 'Solidtime is offline; the active timer was not changed'
+      else
+        start_from_prompt
+      fi
+      ;;
+    "$start_label") start_from_prompt ;;
+    "$open_label") open_solidtime ;;
+  esac
 }
 
 command_name="${1:-menu}"

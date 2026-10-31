@@ -117,7 +117,9 @@ while :; do
     fi
   done
 
-  choice="$(printf '%s\n' "${rows[@]}" | rofi -dmenu -i -matching fuzzy -format i -p "${group:-command}" -theme "$rofi_theme")" || exit 0
+  choice="$(printf '%s\n' "${rows[@]}" | rofi -dmenu -sync -i -matching fuzzy -format i \
+    -p "${group:-command}" -theme "$rofi_theme" \
+    -theme-str 'listview { lines: 6; fixed-height: true; dynamic: false; }')" || exit 0
   [[ "$choice" =~ ^[0-9]+$ ]] || exit 0
 
   case "${row_types[choice]}" in
