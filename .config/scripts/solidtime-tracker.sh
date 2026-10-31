@@ -766,8 +766,20 @@ print_status() {
     '{text:$text, class:$class, tooltip:$tooltip}'
 }
 
+# Close only this menu's loading window. If it was dismissed, do not reopen it
+# when a slow request eventually returns.
+finish_menu_loading() {
+  local pid="$1"
+  if ! kill -0 "$pid" 2>/dev/null; then
+    wait "$pid" 2>/dev/null || true
+    return 1
+  fi
+  kill "$pid" 2>/dev/null || true
+  wait "$pid" 2>/dev/null || true
+}
+
 show_menu() {
-  local status_line choice elapsed start_epoch now_epoch
+  local status_line choice elapsed start_epoch now_epoch loading_file loading_pid
   local stop_label='󰐥  Stop timer'
   local start_label='󰜉  Start timer'
   local switch_label='󰜉  Switch project'
@@ -777,10 +789,22 @@ show_menu() {
     show_error 'Solidtime URL or token is not configured'
     return 0
   fi
+  loading_file="$(mktemp "${TMPDIR:-/tmp}/solidtime-menu.XXXXXX")" || return 1
+  temp_files+=("$loading_file")
+  printf '%s\0nonselectable\x1ftrue\n' \
+    '━━━━━━━━━━━━  ━━━━' '━━━━━━━━━' '━━━━━━━━━━━━━━' >"$loading_file"
+  rofi -dmenu -input "$loading_file" -p 'Time tracker' \
+    -mesg 'Loading timer…' -theme "$rofi_theme" \
+    -theme-str 'listview { lines: 3; fixed-height: true; } element-text { text-color: @outline-variant; }' &
+  loading_pid=$!
+
   if ! load_active_for_action; then
-    show_error 'Solidtime is unavailable'
+    if finish_menu_loading "$loading_pid"; then
+      show_error 'Solidtime is unavailable'
+    fi
     return 0
   fi
+  finish_menu_loading "$loading_pid" || return 0
 
   if (( active_found )); then
     start_epoch="$(date -d "$active_start" +%s 2>/dev/null || printf '0')"
