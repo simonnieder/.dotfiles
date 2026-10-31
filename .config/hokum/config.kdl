@@ -1,0 +1,28 @@
+theme "waybar"
+
+behaviour {
+    position "top-right"
+    stay 6
+    show-at-most 5
+    pause-on-hover #true
+    appearance "system"
+    clock "24h"
+    check-for-updates #false
+}
+
+// Hardware feedback alongside the existing Waybar controls.
+modules {
+    sound #true
+    bluetooth #true
+    osd #true
+    brightness #false
+    bluetooth-notifications #true
+}
+
+rule urgency="low" { timeout 3; }
+
+// Microphone key feedback stays visible during Do Not Disturb.
+rule app="Microphone" { interrupt; timeout 2; }
+
+// Show the requested brightness percentage, including during Do Not Disturb.
+rule app="Brightness" { interrupt; timeout 2; }

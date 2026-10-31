@@ -1,6 +1,11 @@
 // Niri config — ported from ~/.config/hypr/
 // Check the wiki for full docs: https://niri-wm.github.io/niri/Configuration:-Introduction
 
+// GTK 4.20+ needs an explicit compose handler without an input-method daemon.
+// Restore German dead keys such as ^ in Ghostty and other GTK applications.
+environment {
+    GTK_IM_MODULE "simple"
+}
 
 // ==============
 // NAMED WORKSPACES (for startup app placement)
@@ -131,7 +136,7 @@ gestures {
 // ==============
 //   STARTUP
 // ==============
-spawn-at-startup "dunst"
+spawn-at-startup "systemctl" "--user" "start" "hokum.service"
 spawn-sh-at-startup "$HOME/.config/matugen/apply-current-theme.sh"
 spawn-sh-at-startup "swaybg -i \"$HOME/wallpapers/a_city_skyline_with_a_sunset_in_the_background.png\" -m fill"
 spawn-at-startup "waybar"
@@ -139,7 +144,6 @@ spawn-at-startup "nm-applet"
 spawn-at-startup "blueman-applet"
 spawn-sh-at-startup "dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS"
 spawn-sh-at-startup "systemctl --user import-environment DISPLAY WAYLAND_DISPLAY XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS"
-spawn-sh-at-startup "systemctl --user restart voxtype.service"
 spawn-sh-at-startup "hypridle --config $HOME/.config/niri/hypridle.conf"
 
 // Apps on specific workspaces (window rules below handle placement)
@@ -171,6 +175,7 @@ binds {
     Mod+B      hotkey-overlay-title="Focus Browser"            { spawn-sh "$HOME/.config/scripts/focus-app.sh helium helium-browser"; }
     Mod+S      hotkey-overlay-title="Focus Spotify"            { spawn-sh "$HOME/.config/scripts/focus-app.sh spotify spotify"; }
     Mod+Z      hotkey-overlay-title="Focus Zed"            { spawn-sh "$HOME/.config/scripts/focus-app.sh zed zeditor"; }
+    Mod+T      hotkey-overlay-title="Focus T3 Code"         { spawn-sh "$HOME/.config/scripts/focus-app.sh '^(t3code|com\\.t3tools\\.T3Code)$' t3code"; }
     Mod+M      hotkey-overlay-title="Focus Telegram"           { spawn-sh "$HOME/.config/scripts/focus-app.sh telegram Telegram"; }
     Mod+N      hotkey-overlay-title="Focus Obsidian"           { spawn-sh "$HOME/.config/scripts/focus-app.sh obsidian obsidian"; }
     Mod+G      hotkey-overlay-title="Open ChatGPT"           { spawn-sh "$HOME/.config/niri/open-chatgpt.sh"; }
@@ -178,7 +183,6 @@ binds {
     Mod+E      hotkey-overlay-title="Open File Manager: nautilus" { spawn-sh "$HOME/.config/niri/open-nautilus.sh"; }
     Mod+Ctrl+Shift+L hotkey-overlay-title="Lock the Screen: hyprlock"  { spawn-sh "$HOME/.config/scripts/session-power.sh lock"; }
     Mod+Ctrl+Shift+H hotkey-overlay-title="Hibernate"                   { spawn-sh "$HOME/.config/scripts/session-power.sh hibernate"; }
-	Mod+X { spawn "voxtype" "record" "toggle"; }
 
     Mod+Shift+Q              { close-window; }
     Mod+Shift+E              { quit; }
@@ -187,7 +191,8 @@ binds {
 
     // --- Overview (like hypr's expo) ---
     Mod+O repeat=false { toggle-overview; }
-    Mod+Shift+F23 repeat=false { toggle-overview; }
+    // Copilot key sends Super+Shift+F23. Press once to record, again to paste.
+    Mod+Shift+F23 repeat=false hotkey-overlay-title="Hex Dictation" { spawn "hex" "dictation" "toggle"; }
 
     // --- Fullscreen ---
     Mod+Shift+F { fullscreen-window; }
@@ -306,9 +311,6 @@ binds {
     Mod+Ctrl+F { expand-column-to-available-width; }
     Mod+Shift+C       { center-column; }
 
-    // --- Tab groups ---
-    Mod+T { toggle-column-tabbed-display; }
-
     // --- Power / idle ---
     Mod+Shift+O { power-off-monitors; }
 
@@ -316,7 +318,7 @@ binds {
     XF86AudioRaiseVolume allow-when-locked=true { spawn-sh "wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.1+ -l 1.0"; }
     XF86AudioLowerVolume allow-when-locked=true { spawn-sh "wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.1-"; }
     XF86AudioMute        allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"; }
-    XF86AudioMicMute     allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"; }
+    XF86AudioMicMute     allow-when-locked=true { spawn-sh "$HOME/.config/scripts/toggle-microphone.sh"; }
 
     // --- Media ---
     XF86AudioPlay  allow-when-locked=true { spawn-sh "playerctl play-pause"; }
@@ -329,8 +331,8 @@ binds {
     // standard screen-saver keysym too in case firmware hotkey mode changes.
     F9                    allow-when-locked=true { spawn-sh "$HOME/.config/niri/toggle-laptop-brightness.sh"; }
     XF86ScreenSaver       allow-when-locked=true { spawn-sh "$HOME/.config/niri/toggle-laptop-brightness.sh"; }
-    XF86MonBrightnessUp   allow-when-locked=true { spawn "brightnessctl" "set" "+10%"; }
-    XF86MonBrightnessDown allow-when-locked=true { spawn "brightnessctl" "set" "10%-"; }
+    XF86MonBrightnessUp   allow-when-locked=true { spawn-sh "$HOME/.config/scripts/brightness-step.sh up"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn-sh "$HOME/.config/scripts/brightness-step.sh down"; }
 
     // --- Keyboard backlight ---
     XF86KbdLightOnOff      allow-when-locked=true { spawn-sh "$HOME/.config/niri/cycle-keyboard-backlight.sh"; }
@@ -523,6 +525,20 @@ window-rule {
 // ==============
 //  MISC
 // ==============
+// ChatGPT's non-resizable pet overlay shares the main window's app-id/title.
+// Preserve transparency for floating overlays under Wayland and XWayland.
+// Keep this after the global tiled-state rule above.
+window-rule {
+    match app-id=r#"^(chatgpt|ChatGPT)$"# is-floating=true
+    tiled-state false
+    draw-border-with-background false
+    geometry-corner-radius 0
+    clip-to-geometry false
+    border { off; }
+    focus-ring { off; }
+    shadow { off; }
+}
+
 screenshot-path "~/images/screenshot-%Y-%m-%d_%H-%M-%S.png"
 
 hotkey-overlay {

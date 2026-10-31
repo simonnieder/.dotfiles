@@ -99,8 +99,8 @@ in
   boot.loader.systemd-boot.configurationLimit = 5;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  # Use the requested unpatched Linux 7.1.13 kernel line.
-  boot.kernelPackages = pkgs.linuxPackages_7_1;
+  # Linux 7.2.8+ fixes AMDGPU/TTM corruption after hibernation.
+  boot.kernelPackages = pkgs.linuxPackages_7_2;
 
   # Enable networking.
   networking.networkmanager.enable = true;

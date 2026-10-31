@@ -7,6 +7,17 @@ if [[ -z "${ROFI_RETV+x}" ]]; then
   exec rofi -show recent-windows -i -sort -matching normal -theme "$rofi_theme"
 fi
 
+open_all_apps() {
+  local search="${ROFI_INPUT:-${1:-}}"
+  nohup bash -c 'sleep 0.15; exec rofi -show drun -filter "$1" -theme "$2"' \
+    bash "$search" "$rofi_theme" >/dev/null 2>&1 &
+}
+
+if [[ "${ROFI_RETV:-0}" -eq 2 || "${ROFI_INFO:-}" == all-apps ]]; then
+  open_all_apps "${1:-}"
+  exit 0
+fi
+
 if [[ "${ROFI_RETV:-0}" -eq 1 ]]; then
   [[ -n "${ROFI_INFO:-}" ]] || exit 0
   niri msg action focus-window --id "$ROFI_INFO"
@@ -74,7 +85,6 @@ desktop_entry_for_app() {
 }
 
 printf '\0prompt\x1fWindows\n'
-printf '\0no-custom\x1ftrue\n'
 window_count=0
 for window_row in "${window_rows[@]}"; do
   IFS=$'\t' read -r id app title ws <<< "$window_row"
@@ -113,4 +123,6 @@ for window_row in "${window_rows[@]}"; do
   ((window_count += 1))
 done
 
-(( window_count > 0 )) || exit 0
+if (( window_count == 0 )); then
+  printf 'Look in all apps\0icon\x1fsystem-search\x1finfo\x1fall-apps\n'
+fi

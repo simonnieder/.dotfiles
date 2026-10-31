@@ -23,9 +23,9 @@ const LUNA_HIGH_OCG: Preset = {
 
 const SOL_MEDIUM: Preset = {
   provider: "openai-codex",
-  model: "gpt-5.6-sol",
+  model: "gpt-6.1-sol",
   thinking: "medium",
-  label: "Sol 5.6 · medium",
+  label: "Sol 6.1 · medium",
 };
 
 const DEEPSEEK_V4_FLASH_FREE: Preset = {

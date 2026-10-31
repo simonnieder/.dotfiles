@@ -16,9 +16,12 @@ let
     (builtins.removeAttrs (builtins.readDir ../.config) [ "mimeapps.list" ]);
 in
 {
-  imports = [
-    inputs.codex-desktop-linux.homeManagerModules.default
-  ];
+  imports = [ inputs.hex.homeManagerModules.hex ];
+
+  programs.hex = {
+    enable = true;
+    autostart = true;
+  };
 
   home.username = user;
   home.homeDirectory = homeDirectory;
@@ -41,7 +44,7 @@ in
   home.file.".npmrc".source =
     sym "${homeDirectory}/.dotfiles/.npmrc";
 
-  programs.codexDesktopLinux.enable = true;
+  home.packages = [ (pkgs.callPackage ./pkgs/chatgpt.nix { }) ];
 
   programs.direnv = {
     enable = true;
@@ -82,19 +85,58 @@ in
     Install.WantedBy = [ "graphical-session.target" ];
   };
 
-  systemd.user.services.voxtype = {
+  systemd.user.services.hex = {
     Unit = {
-      Description = "Voxtype push-to-talk voice-to-text daemon";
-      Documentation = "https://voxtype.io";
+      After = [ "internal-microphone.service" ];
+      Requires = [ "internal-microphone.service" ];
+    };
+    Service.Environment = [
+      "PIPEWIRE_NODE=alsa_input.pci-0000_04_00.6.HiFi__Mic2__source"
+    ];
+  };
+
+  systemd.user.services.internal-microphone = {
+    Unit = {
+      Description = "Restore internal microphone capture and gain";
+      After = [ "pipewire.service" "wireplumber.service" ];
       PartOf = [ "graphical-session.target" ];
-      After = [ "graphical-session.target" ];
     };
     Service = {
-      Type = "simple";
-      ExecStart = "${pkgs.voxtype-onnx}/bin/voxtype daemon";
+      Type = "oneshot";
+      RemainAfterExit = true;
       Restart = "on-failure";
-      RestartSec = 5;
-      Environment = "XDG_RUNTIME_DIR=%t";
+      RestartSec = 2;
+      ExecStart = pkgs.writeShellScript "setup-internal-microphone" ''
+        set -eu
+        ${pkgs.alsa-utils}/bin/amixer -D hw:Generic_1 sset 'Internal Mic Boost' 24dB
+        ${pkgs.alsa-utils}/bin/amixer -D hw:Generic_1 sset Capture 0dB cap
+      '';
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
+
+  systemd.user.services.battery-notifications = {
+    Unit = {
+      Description = "Low battery notifications through Hokum";
+      After = [ "hokum.service" ];
+      PartOf = [ "graphical-session.target" ];
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStart = "${pkgs.python3}/bin/python3 ${homeDirectory}/.config/scripts/battery-notifications.py";
+      Environment = "PATH=${pkgs.libnotify}/bin";
+    };
+  };
+
+  systemd.user.timers.battery-notifications = {
+    Unit = {
+      Description = "Check battery charge every minute";
+      PartOf = [ "graphical-session.target" ];
+    };
+    Timer = {
+      OnActiveSec = "15s";
+      OnUnitActiveSec = "60s";
+      AccuracySec = "5s";
     };
     Install.WantedBy = [ "graphical-session.target" ];
   };

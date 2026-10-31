@@ -3,8 +3,6 @@ git:
     - colorArg: always
       command: diff-so-fancy --colors --tabs=4
 gui:
-  authorColors:
-    "*": "#f3be7c"
   theme:
     activeBorderColor:
       - "#aeaed1"
@@ -27,3 +25,5 @@ gui:
       - "#d8647e"
     defaultFgColor:
       - "#cdcdcd"
+    authorColors:
+      "*": "#f3be7c"

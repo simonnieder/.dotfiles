@@ -29,20 +29,45 @@ window#waybar {
   padding: 0 8px;
   margin: 0 2px;
   min-width: 10px;
+  font-family: 'JetBrainsMono Nerd Font';
+  font-size: 13px;
+  font-weight: 500;
   color: @on_surface_variant;
+  background: transparent;
+  background-image: linear-gradient(@outline_variant, @outline_variant);
+  background-size: 0px 2px;
+  background-repeat: no-repeat;
+  background-position: center top;
+  border-radius: 0;
+  box-shadow: none;
+  transition: background-size 180ms ease-out,
+              color 180ms ease-out,
+              box-shadow 180ms ease-out,
+              opacity 180ms ease-out;
+}
+
+#workspaces button:hover {
+  color: @on_surface;
+  background-image: linear-gradient(@outline_variant, @outline_variant);
+  background-size: 12px 2px;
 }
 
 #workspaces button.active,
 #workspaces button.focused {
-  color: @primary;
-  background: @surface_container_high;
-  border-radius: 8px;
-  padding-left: 7px;
-  padding-right: 9px;
+  color: @on_surface;
+  font-weight: 700;
+  box-shadow: none;
+  background-image: linear-gradient(@secondary, @secondary);
+  background-size: 12px 2px;
 }
 
 #workspaces button.empty {
   opacity: 0.5;
+}
+
+#workspaces button.empty.active,
+#workspaces button.empty.focused {
+  opacity: 1;
 }
 
 #cpu,
@@ -51,7 +76,7 @@ window#waybar {
 #pulseaudio,
 #custom-media-player,
 #custom-time-tracker,
-#custom-voxtype {
+#custom-do-not-disturb {
   min-width: 12px;
   margin: 0 9px;
 }
@@ -144,13 +169,16 @@ menuitem:hover {
   color: @error;
 }
 
-#custom-voxtype.recording,
-#custom-voxtype.transcribing {
-  color: @error;
-}
-
 #custom-time-tracker.running {
   color: @primary;
+}
+
+#custom-do-not-disturb.enabled {
+  color: @primary;
+}
+
+#custom-do-not-disturb.disabled {
+  color: @on_surface_variant;
 }
 
 #custom-time-tracker.break {
@@ -169,7 +197,7 @@ menuitem:hover {
 #pulseaudio,
 #custom-media-player,
 #custom-time-tracker,
-#custom-voxtype,
+#custom-do-not-disturb,
 #tray,
 #custom-expand-icon {
   font-size: 15px;
@@ -186,7 +214,7 @@ menuitem:hover {
 .left #battery, .right #battery,
 .left #backlight, .right #backlight,
 .left #pulseaudio, .right #pulseaudio,
-.left #custom-voxtype, .right #custom-voxtype {
+.left #custom-do-not-disturb, .right #custom-do-not-disturb {
   margin: 1.5px 0;
   padding: 6px 0;
   min-width: 0;

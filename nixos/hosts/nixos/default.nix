@@ -16,7 +16,8 @@
       PLATFORM_PROFILE_ON_AC = "balanced";
       PLATFORM_PROFILE_ON_BAT = "balanced";
       PLATFORM_PROFILE_ON_SAV = "balanced";
-      STOP_CHARGE_THRESH_BAT0 = 1;
+      # Disable Lenovo battery conservation mode so charging can reach 100%.
+      STOP_CHARGE_THRESH_BAT0 = 0;
     };
   };
   services.logind.settings.Login = {

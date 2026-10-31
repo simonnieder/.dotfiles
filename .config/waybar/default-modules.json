@@ -125,13 +125,5 @@
         },
         "escape": true,
         "exec": "$HOME/.config/waybar/mediaplayer.py 2> /dev/null"
-    },
-
-    "custom/voxtype": {
-        "exec": "voxtype status --follow --format json",
-        "return-type": "json",
-        "format": "{}",
-        "tooltip": false,
-        "restart-interval": 1
     }
 }

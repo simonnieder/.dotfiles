@@ -686,7 +686,7 @@ open_solidtime() {
 }
 
 print_status() {
-  local response start_epoch now_epoch elapsed formatted started_at tooltip label text class today
+  local response start_epoch now_epoch elapsed formatted started_at tooltip label display_label description text class today
 
   if ! load_base_url; then
     print_idle 'Solidtime URL is not configured'
@@ -723,15 +723,22 @@ print_status() {
   formatted="$(format_duration "$elapsed")"
   started_at="$(date -d "$active_start" '+%H:%M' 2>/dev/null || true)"
 
-  if [[ -n "$active_task_name" ]]; then
-    label="$active_task_name"
-    [[ -n "$active_project_name" ]] && label+=" (${active_project_name})"
-  elif [[ -n "$active_project_name" ]]; then
+  description="$(one_line "$active_description")"
+  if [[ -n "$active_project_name" ]]; then
     label="$active_project_name"
-  elif [[ -n "$active_description" ]]; then
-    label="$(one_line "$active_description")"
+  elif [[ -n "$description" ]]; then
+    label="$description"
+  elif [[ -n "$active_task_name" ]]; then
+    label="$active_task_name"
   else
     label='no project'
+  fi
+  display_label="$label"
+  if [[ -z "$active_project_name" && -n "$description" ]]; then
+    if (( ${#description} > 24 )); then
+      description="${description:0:23}…"
+    fi
+    display_label="$description"
   fi
 
   if [[ "${active_type,,}" == break ]]; then
@@ -739,7 +746,7 @@ print_status() {
     text="󰛊 break ${formatted}"
     class='break'
   else
-    text="󱎫 ${label} ${formatted}"
+    text="󱎫 ${display_label} ${formatted}"
     class='running'
     if [[ -n "$started_at" ]]; then
       tooltip="${formatted} current · started ${started_at}"

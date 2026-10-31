@@ -9,6 +9,8 @@
 
 /*****----- Configuration -----*****/
 configuration {
+	sort:                       true;
+	sorting-method:             "fzf";
 	modi:                       "drun,run,window";
     show-icons:                 true;
     icon-theme: "Papirus";

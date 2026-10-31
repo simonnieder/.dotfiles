@@ -91,6 +91,19 @@ require "marks".setup {
 
 require "mason".setup()
 require "mini.pick".setup()
+require("mini.ai").setup({
+	custom_textobjects = {
+		['$'] = { '%b$$', '^.().*().$' },
+	},
+})
+require("mini.pairs").setup({
+	mappings = {
+		['$'] = { action = 'closeopen', pair = '$$', neigh_pattern = '[^\\].', register = { cr = false } },
+		['"'] = false,
+		["'"] = false,
+		['`'] = false,
+	},
+})
 require "vague".setup({ transparent = true })
 require "mini.statusline".setup()
 require "mini.bufremove".setup()
@@ -139,7 +152,7 @@ if not vim.env.TYPST_ROOT then
 end
 require "typst-preview".setup {
 	debug = true,
-	--invert_colors = 'always',
+	invert_colors = 'always',
 	port = 8000,
 	dependencies_bin = {
 		tinymist = 'tinymist',

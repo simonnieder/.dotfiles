@@ -9,16 +9,16 @@ action_groups=(
   Apps Apps
   Tools Tools Tools
   Appearance Appearance Appearance
-  System System System System
+  System System System System System System
   Folders Folders Folders Folders
 )
-action_icons=(󰀻 󰖲 󰅌 󰞅 󱎫 󰔎 󰖔 󰍹  󰑓 󰑓 󰒲   󰠮 󰲋)
-action_ids=(0 1 2 3 4 5 6 7 8 9 10 13 11 12 14 15)
+action_icons=(󰀻 󰖲 󰅌 󰞅 󱎫 󰔎 󰖔 󰍹 󰂛  󰑓 󰑓 󰑓 󰒲   󰠮 󰲋)
+action_ids=(0 1 2 3 4 5 6 7 16 8 9 10 17 13 11 12 14 15)
 action_names=(
   'Applications' 'Recent windows'
   'Clipboard' 'Emoji' 'Time tracker'
   'Toggle light/dark mode' 'Toggle night mode' 'Toggle laptop screen'
-  'Power' 'Reload niri' 'Restart waybar' 'Rebuild NixOS'
+  'Toggle Do Not Disturb' 'Power' 'Reload niri' 'Restart waybar' 'Restart touchpad' 'Rebuild NixOS'
   'Edit dotfiles' 'Edit NixOS config' 'Open wiki' 'Open repos'
 )
 
@@ -81,6 +81,12 @@ case "$1" in
     ;;
   15)
     exec zeditor "$HOME/repos"
+    ;;
+  16)
+    exec "$HOME/.config/waybar/scripts/do-not-disturb.sh" toggle
+    ;;
+  17)
+    exec ghostty --title="Restart touchpad" -e bash "$HOME/.config/scripts/restart-touchpad.sh"
     ;;
 esac
 }

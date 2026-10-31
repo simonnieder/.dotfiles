@@ -18,9 +18,9 @@ if (( current == 0 )); then
         restore=$((max * 30 / 100))
     fi
     brightnessctl -q --min-value=0 -d "$device" set "$restore"
-    dunstify -a brightness -u low "Laptop screen on" 2>/dev/null || true
 else
     printf '%s\n' "$current" > "$state_file"
     brightnessctl -q --min-value=0 -d "$device" set 0
-    dunstify -a brightness -u low "Laptop screen brightness: 0" 2>/dev/null || true
 fi
+
+"$HOME/.config/scripts/brightness-step.sh" show

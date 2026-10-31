@@ -3,17 +3,22 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    hex = {
+      url = "github:anomalyco/hex";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
+    };
+    hokum = {
+      url = "github:anomalyco/hokum/4f620ff7c41e04baf2c8653960b58d8af9d40611";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     home-manager = {
       url = "github:nix-community/home-manager/master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    codex-desktop-linux = {
-      url = "path:/home/simonnieder/repos/codex-desktop-linux";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
-  outputs = { self, nixpkgs, home-manager, codex-desktop-linux, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, ... }@inputs:
     let
       user = "simonnieder";
       homeDirectory = "/home/${user}";

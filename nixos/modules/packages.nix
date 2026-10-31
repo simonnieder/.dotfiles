@@ -1,7 +1,9 @@
-{ pkgs, ... }:
+{ pkgs, inputs, ... }:
 
 let
+  hokum = inputs.hokum.packages.${pkgs.stdenv.hostPlatform.system}.default;
   nordvpn-cli = pkgs.callPackage ../pkgs/nordvpn-cli.nix { };
+  learnharness = pkgs.callPackage ../pkgs/learnharness.nix { };
   helium-browser = pkgs.appimageTools.wrapType2 rec {
     pname = "helium-browser";
     version = "0.13.3.1";
@@ -48,11 +50,11 @@ let
 
   t3code = pkgs.appimageTools.wrapType2 rec {
     pname = "t3code";
-    version = "0.0.42";
+    version = "0.1.3";
 
     src = pkgs.fetchurl {
       url = "https://github.com/pingdotgg/t3code/releases/download/v${version}/T3-Code-${version}-x86_64.AppImage";
-      sha256 = "1x6dwfb5yp9hxmihj720a69ip4qixxrcfk4lldckmvf2mg6zrhcd";
+      sha256 = "08fz8a1r8q92bj329z8fimy5mmx2q00y7l51zcdxm1905m4cw740";
     };
 
     appimageContents = pkgs.appimageTools.extract { inherit pname version src; };
@@ -82,6 +84,14 @@ let
   });
 in
 {
+  services.dbus.packages = [ hokum ];
+  systemd.packages = [ hokum ];
+
+  programs.localsend = {
+    enable = true;
+    openFirewall = true;
+  };
+
   # Shared package set: every host imports this module unchanged.
   environment.systemPackages = with pkgs; [
     vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
@@ -107,7 +117,8 @@ in
     waybar
     rofi
     nautilus
-    dunst
+    hokum
+    libnotify
     ghostty
     tmux
     fish
@@ -123,7 +134,6 @@ in
     wl-clipboard
     cliphist
     rofimoji
-    voxtype-onnx
 
     # theming / UI
     matugen
@@ -164,17 +174,18 @@ in
     nordvpn-cli
 
     # apps referenced in config
-    zotero
     xournalpp
     telegram-desktop
     thunderbird
     spotify
     protege-distribution
     qbittorrent
+    jellyfin-desktop
     ollama
     zed-editor
     helium-browser
     t3code
+    learnharness
     gh
     lazydocker
     android-tools
@@ -182,7 +193,6 @@ in
     anki
     inkscape
     digikam
-    localsend
     discord
     gnome-power-manager
   ];
